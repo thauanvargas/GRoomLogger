@@ -120,6 +120,23 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         hPacket.readInteger();
         roomName = hPacket.readString();
 
+        if (!entered) {
+            Date currentDate = new Date();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+            String currentDateTime = dateFormat.format(currentDate);
+            String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
+            logToFile(logRoomReset);
+            Platform.runLater(() -> {
+                infoLabel.setText("Locations was resetted because room was reloaded.");
+                consoleTextArea.appendText(logRoomReset + "\n");
+            });
+            roomLoaded = false;
+            playerList.clear();
+            locationList.clear();
+        } else {
+            initialEntryOnRoom = false;
+        }
+
         if (!roomLoaded && !entered) {
             Platform.runLater(() -> {
                 isSittedLocationCheckbox.setDisable(false);
@@ -132,25 +149,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             initialEntryOnRoom = true;
         }
 
-        if(!entered) {
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            String currentDateTime = dateFormat.format(currentDate);
-            String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
-            logToFile(logRoomReset);
-            Platform.runLater(() -> {
-                infoLabel.setText("Locations was resetted because room was reloaded.");
-                consoleTextArea.appendText(logRoomReset + "\n");
-            });
-            playerList.clear();
-            locationList.clear();
-        }else {
-            initialEntryOnRoom = false;
-        }
     }
 
-
-//    {in:Whisper}{i:4}{s:"‡ LEGACY HABBO ‡ Seja bem vindo! Leia os postits para entender o funcionamento do sistema."}{i:0}{i:34}{i:0}{i:-1}
 
     private void onChat(HMessage hMessage) {
         if (roomLoaded && logChatCheckbox.isSelected()) {
@@ -163,7 +163,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
             if (player != null) {
                 boolean isBot = player.isBot();
-                if(player.isBot() && !logChatBotsCheckbox.isSelected()) {
+                if (player.isBot() && !logChatBotsCheckbox.isSelected()) {
                     return;
                 }
                 Date currentDate = new Date();
@@ -171,8 +171,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 String currentDateTime = dateFormat.format(currentDate);
                 String hash = this.getPacketInfoManager().getPacketInfoFromHeaderId(HMessage.Direction.TOCLIENT, hPacket.headerId()).getName();
 
-                if(Objects.equals(hash, "Whisper")) {
-                    if(bubble == 34) {
+                if (Objects.equals(hash, "Whisper")) {
+                    if (bubble == 34) {
                         hash = "WIRED";
                     }
                 }
@@ -187,55 +187,58 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onUsers(HMessage hMessage) {
-        if (roomLoaded) {
-            try {
-                HPacket hPacket = hMessage.getPacket();
-                HEntity[] roomUsersList = HEntity.parse(hPacket);
-                for (HEntity hEntity : roomUsersList) {
-                    if (hEntity.getName().equals(habboUserName)) {
-                        habboIndex = hEntity.getIndex();
-                    }
-
-                    if(hEntity.getEntityType() == HEntityType.PET) {
-                       continue;
-                    }
-
-                    Player player = findPlayerById(hEntity.getId());
-
-                    if (player == null) {
-                        player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
-                        if(hEntity.getEntityType() == HEntityType.BOT || hEntity.getEntityType() == HEntityType.OLD_BOT) {
-                            player.setBot(true);
+        new Thread(() -> {
+            boolean isInitial = initialEntryOnRoom;
+            if (roomLoaded) {
+                try {
+                    HPacket hPacket = hMessage.getPacket();
+                    HEntity[] roomUsersList = HEntity.parse(hPacket);
+                    for (HEntity hEntity : roomUsersList) {
+                        if (hEntity.getName().equals(habboUserName)) {
+                            habboIndex = hEntity.getIndex();
                         }
-                        player.setCoordX(-1);
-                        player.setCoordY(-1);
-                        playerList.add(player);
-                        if (logEntersLeavesCheckbox.isSelected()) {
-                            Date currentDate = new Date();
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                            String currentDateTime = dateFormat.format(currentDate);
-                            String logEntered = "";
-                            if(!initialEntryOnRoom) {
-                                logEntered = "Player > " + player.getName() + " < entered the room at " + currentDateTime;
-                            }else {
-                                logEntered = "Player > " + player.getName() + " < is at the room on load ";
+
+                        if (hEntity.getEntityType() == HEntityType.PET) {
+                            continue;
+                        }
+
+                        Player player = findPlayerById(hEntity.getId());
+
+                        if (player == null) {
+                            player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
+                            if (hEntity.getEntityType() == HEntityType.BOT || hEntity.getEntityType() == HEntityType.OLD_BOT) {
+                                player.setBot(true);
                             }
-                            logToFile(logEntered);
-                            String finalLogEntered = logEntered;
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(finalLogEntered + "\n");
-                            });
+                            player.setCoordX(-1);
+                            player.setCoordY(-1);
+                            playerList.add(player);
+                            if (logEntersLeavesCheckbox.isSelected()) {
+                                Date currentDate = new Date();
+                                SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                                String currentDateTime = dateFormat.format(currentDate);
+                                String logEntered = "";
+                                if (!isInitial) {
+                                    logEntered = "Player > " + player.getName() + " < entered the room at " + currentDateTime;
+                                } else {
+                                    logEntered = "Player > " + player.getName() + " < is at the room on load ";
+                                }
+                                logToFile(logEntered);
+                                String finalLogEntered = logEntered;
+                                Platform.runLater(() -> {
+                                    consoleTextArea.appendText(finalLogEntered + "\n");
+                                });
+                            }
+                        } else {
+                            player.setIndex(hEntity.getIndex());
+                            player.setCoordX(-1);
+                            player.setCoordY(-1);
                         }
-                    } else {
-                        player.setIndex(hEntity.getIndex());
-                        player.setCoordX(-1);
-                        player.setCoordY(-1);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-        }
+        }).start();
     }
 
     private void onUserUpdate(HMessage hMessage) {
@@ -252,11 +255,11 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                     String currentDateTime = dateFormat.format(currentDate);
 
-                    if(player == null) {
+                    if (player == null) {
                         continue;
                     }
 
-                    if(location == null) {
+                    if (location == null) {
                         continue;
                     }
 
