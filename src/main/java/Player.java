@@ -13,7 +13,7 @@ public class Player
     private String name;
     private int coordX;
     private int coordY;
-    private Location location;
+    private Location location = null;
     public Player(Integer id, Integer index, String name)
     {
         this.id = id;

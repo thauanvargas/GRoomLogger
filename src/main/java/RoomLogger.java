@@ -12,6 +12,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.FileHandler;
@@ -20,7 +21,7 @@ import java.util.logging.SimpleFormatter;
 
 @ExtensionInfo(
         Title = "Room Logger",
-        Description = "Made with Luv",
+        Description = "Save all your chat and more!",
         Version = "1.0",
         Author = "Thauan"
 )
@@ -40,7 +41,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public TextArea consoleTextArea;
     public Label infoLabel;
     public Label customNameLabel;
-
+    public CheckBox logEntersLeavesCheckbox;
+    public CheckBox logChatCheckbox;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -55,6 +57,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     protected List<Location> locationList = new ArrayList<>();
     protected GAsync gAsync;
     public boolean roomLoaded = false;
+    public boolean initialEntryOnRoom = false;
+    public String roomName = "";
 
     @Override
     protected void onStartConnection() {
@@ -89,18 +93,45 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             habboUserName = hMessage.getPacket().readString();
         });
 
-        intercept(HMessage.Direction.TOSERVER, "GetGuestRoom", hMessage -> {
-            roomLoaded = true;
-            Platform.runLater(() -> {
-                isSittedLocationCheckbox.setDisable(false);
-                logLocationCheckbox.setDisable(false);
-                customLocationNameTextField.setDisable(false);
-                customNameLabel.setDisable(false);
-                infoLabel.setText("Room was loaded, extension ready, any question ask in discord > thauanvargas <");
-            });
+        intercept(HMessage.Direction.TOCLIENT, "GetGuestRoomResult", hMessage -> {
+            HPacket hPacket = hMessage.getPacket();
+            boolean entered = hPacket.readBoolean();
+            hPacket.readInteger();
+            roomName = hPacket.readString();
+
+            if (!roomLoaded && !entered) {
+                Platform.runLater(() -> {
+                    isSittedLocationCheckbox.setDisable(false);
+                    logLocationCheckbox.setDisable(false);
+                    customLocationNameTextField.setDisable(false);
+                    customNameLabel.setDisable(false);
+                    infoLabel.setText("Room was loaded, extension ready, any question ask in discord > thauanvargas <");
+                });
+                roomLoaded = true;
+                initialEntryOnRoom = true;
+            }
+
+            if(!entered) {
+                Date currentDate = new Date();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                String currentDateTime = dateFormat.format(currentDate);
+                String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
+                logToFile(logRoomReset);
+                Platform.runLater(() -> {
+                    infoLabel.setText("Locations was resetted because room was reloaded.");
+                    consoleTextArea.appendText(logRoomReset + "\n");
+                });
+                playerList.clear();
+                locationList.clear();
+            }else {
+                initialEntryOnRoom = false;
+            }
+
+
+
         });
 
-        intercept(HMessage.Direction.TOCLIENT, "Users",this::onUsers);
+        intercept(HMessage.Direction.TOCLIENT, "Users", this::onUsers);
 
         intercept(HMessage.Direction.TOCLIENT, "UserUpdate", this::onUserUpdate);
 
@@ -108,6 +139,33 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         intercept(HMessage.Direction.TOCLIENT, "UserRemove", this::onUserRemove);
 
+        intercept(HMessage.Direction.TOCLIENT, "Chat", this::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "Shout", this::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "Whisper", this::onChat);
+
+    }
+
+    private void onChat(HMessage hMessage) {
+        if (roomLoaded && logChatCheckbox.isSelected()) {
+            HPacket hPacket = hMessage.getPacket();
+            int index = hPacket.readInteger();
+            String message = hPacket.readString(StandardCharsets.UTF_8);
+            Player player = findPlayerByIndex(index);
+
+            if (player != null) {
+                Date currentDate = new Date();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+                String currentDateTime = dateFormat.format(currentDate);
+                String hash = this.getPacketInfoManager().getPacketInfoFromHeaderId(HMessage.Direction.TOCLIENT, hPacket.headerId()).getName();
+                String logChat = "[" + hash + "] [" + currentDateTime + "] " + player.getName() + " > " + message;
+                logToFile(logChat);
+                Platform.runLater(() -> {
+                    consoleTextArea.appendText(logChat + "\n");
+                });
+            }
+        }
     }
 
     private void onUsers(HMessage hMessage) {
@@ -125,15 +183,22 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     if (player == null) {
                         player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
                         playerList.add(player);
-                        Date currentDate = new Date();
-                        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                        String currentDateTime = dateFormat.format(currentDate);
-                        String logEntered = "Player > " + player.getName() + " < entered the room at " + currentDateTime;
-                        System.out.println(logEntered);
-                        logToFile(logEntered);
-                        Platform.runLater(() -> {
-                            consoleTextArea.appendText(logEntered + "\n");
-                        });
+                        if (logEntersLeavesCheckbox.isSelected()) {
+                            Date currentDate = new Date();
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                            String currentDateTime = dateFormat.format(currentDate);
+                            String logEntered = "";
+                            if(!initialEntryOnRoom) {
+                                logEntered = "Player > " + player.getName() + " < entered the room at " + currentDateTime;
+                            }else {
+                                logEntered = "Player > " + player.getName() + " < is at the room on load ";
+                            }
+                            logToFile(logEntered);
+                            String finalLogEntered = logEntered;
+                            Platform.runLater(() -> {
+                                consoleTextArea.appendText(finalLogEntered + "\n");
+                            });
+                        }
                     } else {
                         player.setIndex(hEntity.getIndex());
                         player.setCoordX(-1);
@@ -160,29 +225,29 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                     String currentDateTime = dateFormat.format(currentDate);
 
-                    if (location != null) {
-                        if ((location.isSitted() && hStance == HStance.Sit) || !location.isSitted()) {
-                            String log = getLog(player, location, currentDateTime, false);
-                            System.out.println(log);
-                            logToFile(log);
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                            });
+                    if (player != null) {
+                        if (location != null) {
+                            if ((location.isSitted() && hStance == HStance.Sit) || !location.isSitted()) {
+                                String log = getLog(player, location, currentDateTime, false);
+                                logToFile(log);
+                                Platform.runLater(() -> {
+                                    consoleTextArea.appendText(log + "\n");
+                                });
+                            }
+                        } else {
+                            if (player.getLocation() != null) {
+                                String log = getLog(player, player.getLocation(), currentDateTime, true);
+                                logToFile(log);
+                                Platform.runLater(() -> {
+                                    consoleTextArea.appendText(log + "\n");
+                                });
+                                player.setLocation(null);
+                            }
                         }
-                    } else {
-                        if (player.getLocation() != null) {
-                            String log = getLog(player, player.getLocation(), currentDateTime, true);
-                            System.out.println(log);
-                            logToFile(log);
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                            });
-                            player.setLocation(null);
-                        }
+
+                        player.setLocation(location);
+
                     }
-
-                    player.setLocation(location);
-
 
                 }
             } catch (Exception e) {
@@ -198,15 +263,16 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         Player player = findPlayerByIndex(Integer.parseInt(index));
 
         if (player != null) {
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            String currentDateTime = dateFormat.format(currentDate);
-            String logLeave = "Player > " + player.getName() + " < left the room at " + currentDateTime;
-            System.out.println(logLeave);
-            logToFile(logLeave);
-            Platform.runLater(() -> {
-                consoleTextArea.appendText(logLeave + "\n");
-            });
+            if (logEntersLeavesCheckbox.isSelected()) {
+                Date currentDate = new Date();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                String currentDateTime = dateFormat.format(currentDate);
+                String logLeave = "Player > " + player.getName() + " < left the room at " + currentDateTime;
+                logToFile(logLeave);
+                Platform.runLater(() -> {
+                    consoleTextArea.appendText(logLeave + "\n");
+                });
+            }
             playerList.remove(player);
         }
 
