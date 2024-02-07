@@ -14,6 +14,7 @@ public class Player
     private int coordX;
     private int coordY;
     private Location location = null;
+    private boolean isBot = false;
     public Player(Integer id, Integer index, String name)
     {
         this.id = id;
@@ -57,5 +58,13 @@ public class Player
 
     public void setLocation(Location location) {
         this.location = location;
+    }
+
+    public boolean isBot() {
+        return isBot;
+    }
+
+    public void setBot(boolean bot) {
+        isBot = bot;
     }
 }

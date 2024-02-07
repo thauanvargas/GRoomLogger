@@ -28,7 +28,7 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
 
     @Override
     protected String getTitle() {
-        return "Market Sniper v" + RoomLogger.class.getAnnotation(ExtensionInfo.class).Version();
+        return "RoomLogger v" + RoomLogger.class.getAnnotation(ExtensionInfo.class).Version();
     }
 
     @Override
