@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane prefHeight="417.0" prefWidth="609.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="RoomLogger">
+   <children>
+      <CheckBox fx:id="logLocationCheckbox" layoutX="51.0" layoutY="47.0" mnemonicParsing="false" text="Mark new Location" />
+      <Label fx:id="infoLabel" layoutX="39.0" layoutY="363.0" prefHeight="17.0" prefWidth="531.0" text="Please Reload the Room for it to work properly." />
+      <TextArea fx:id="consoleTextArea" layoutX="39.0" layoutY="109.0" prefHeight="200.0" prefWidth="531.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #ffffff;" />
+      <TextField fx:id="customLocationNameTextField" layoutX="383.0" layoutY="43.0" />
+      <Label fx:id="customNameLabel" layoutX="298.0" layoutY="47.0" text="Custom Name" />
+      <CheckBox fx:id="isSittedLocationCheckbox" layoutX="195.0" layoutY="47.0" mnemonicParsing="false" text="is Sitted?" />
+   </children>
+</AnchorPane>
