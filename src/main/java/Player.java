@@ -67,4 +67,12 @@ public class Player
     public void setBot(boolean bot) {
         isBot = bot;
     }
+
+    public int getCoordX() {
+        return coordX;
+    }
+
+    public int getCoordY() {
+        return coordY;
+    }
 }

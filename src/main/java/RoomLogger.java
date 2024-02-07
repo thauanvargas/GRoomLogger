@@ -238,29 +238,41 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                     String currentDateTime = dateFormat.format(currentDate);
 
-                    if (player != null) {
-                        if (location != null) {
-                            if ((location.isSitted() && hStance == HStance.Sit) || !location.isSitted()) {
-                                String log = getLog(player, location, currentDateTime, false);
-                                logToFile(log);
-                                Platform.runLater(() -> {
-                                    consoleTextArea.appendText(log + "\n");
-                                });
-                            }
-                        } else {
-                            if (player.getLocation() != null) {
-                                String log = getLog(player, player.getLocation(), currentDateTime, true);
-                                logToFile(log);
-                                Platform.runLater(() -> {
-                                    consoleTextArea.appendText(log + "\n");
-                                });
-                                player.setLocation(null);
-                            }
-                        }
-
-                        player.setLocation(location);
-
+                    if(player == null) {
+                        continue;
                     }
+
+                    if(location == null) {
+                        continue;
+                    }
+
+                    if(currentX == player.getCoordX() && currentY == player.getCoordY()) {
+                        if (player.getLocation() != null) {
+                            String log = getLog(player, player.getLocation(), currentDateTime, true);
+                            logToFile(log);
+                            Platform.runLater(() -> {
+                                consoleTextArea.appendText(log + "\n");
+                            });
+                            player.setLocation(null);
+                            continue;
+                        }
+                        continue;
+                    }
+
+
+                    player.setCoordX(currentX);
+                    player.setCoordY(currentY);
+
+
+                    if (!location.isSitted() || hStance == HStance.Sit) {
+                        String log = getLog(player, location, currentDateTime, false);
+                        logToFile(log);
+                        Platform.runLater(() -> {
+                            consoleTextArea.appendText(log + "\n");
+                        });
+                    }
+
+                    player.setLocation(location);
 
                 }
             } catch (Exception e) {
