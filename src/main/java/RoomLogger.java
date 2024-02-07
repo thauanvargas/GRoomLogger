@@ -149,11 +149,16 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
     }
 
+
+//    {in:Whisper}{i:4}{s:"‡ LEGACY HABBO ‡ Seja bem vindo! Leia os postits para entender o funcionamento do sistema."}{i:0}{i:34}{i:0}{i:-1}
+
     private void onChat(HMessage hMessage) {
         if (roomLoaded && logChatCheckbox.isSelected()) {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
             String message = hPacket.readString(StandardCharsets.UTF_8);
+            hPacket.readInteger();
+            int bubble = hPacket.readInteger();
             Player player = findPlayerByIndex(index);
 
             if (player != null) {
@@ -165,6 +170,13 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
                 String currentDateTime = dateFormat.format(currentDate);
                 String hash = this.getPacketInfoManager().getPacketInfoFromHeaderId(HMessage.Direction.TOCLIENT, hPacket.headerId()).getName();
+
+                if(Objects.equals(hash, "Whisper")) {
+                    if(bubble == 34) {
+                        hash = "WIRED";
+                    }
+                }
+
                 String logChat = "[" + (isBot ? "BOT" : hash) + "] [" + currentDateTime + "] " + player.getName() + " : " + message;
                 logToFile(logChat);
                 Platform.runLater(() -> {
@@ -195,6 +207,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         if(hEntity.getEntityType() == HEntityType.BOT || hEntity.getEntityType() == HEntityType.OLD_BOT) {
                             player.setBot(true);
                         }
+                        player.setCoordX(-1);
+                        player.setCoordY(-1);
                         playerList.add(player);
                         if (logEntersLeavesCheckbox.isSelected()) {
                             Date currentDate = new Date();
@@ -246,16 +260,14 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         continue;
                     }
 
-                    if(currentX == player.getCoordX() && currentY == player.getCoordY()) {
-                        if (player.getLocation() != null) {
-                            String log = getLog(player, player.getLocation(), currentDateTime, true);
-                            logToFile(log);
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                            });
-                            player.setLocation(null);
-                            continue;
-                        }
+
+                    if (player.getLocation() != null) {
+                        String log = getLog(player, player.getLocation(), currentDateTime, true);
+                        logToFile(log);
+                        Platform.runLater(() -> {
+                            consoleTextArea.appendText(log + "\n");
+                        });
+                        player.setLocation(null);
                         continue;
                     }
 
@@ -264,7 +276,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     player.setCoordY(currentY);
 
 
-                    if (!location.isSitted() || hStance == HStance.Sit) {
+                    if (!location.isSitted() || (location.isSitted() && hStance == HStance.Sit)) {
                         String log = getLog(player, location, currentDateTime, false);
                         logToFile(log);
                         Platform.runLater(() -> {

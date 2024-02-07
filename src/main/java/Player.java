@@ -11,8 +11,8 @@ public class Player
 
     private int index;
     private String name;
-    private int coordX;
-    private int coordY;
+    private int coordX = -1;
+    private int coordY = -1;
     private Location location = null;
     private boolean isBot = false;
     public Player(Integer id, Integer index, String name)
