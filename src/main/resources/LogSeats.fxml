@@ -27,12 +27,12 @@
         </Tab>
         <Tab text="Webhook Configuration">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-                <Label fx:id="webhookInfoLabel" layoutX="46.0" layoutY="339.0" prefHeight="17.0" prefWidth="531.0" />
+                <Label fx:id="webhookInfoLabel" layoutX="21.0" layoutY="366.0" prefHeight="17.0" prefWidth="561.0" />
                 <Label layoutX="62.0" layoutY="98.0" text="Discord Webhook URL:" />
-                <CheckBox fx:id="enableWebhookCheckbox" layoutX="233.0" layoutY="34.0" mnemonicParsing="false" onAction="#toggleWebhookClick" text="Enable Webhook" />
+                <CheckBox fx:id="enableWebhookCheckbox" layoutX="233.0" layoutY="34.0" mnemonicParsing="false" onAction="#toggleWebhookClick" text="Enable Discord Webhook" />
                 <Button fx:id="testWebhookCheckbox" layoutX="464.0" layoutY="122.0" mnemonicParsing="false" onAction="#testWebhookClick" text="TEST" />
                 <TextField fx:id="webhookUrlTextField" layoutX="62.0" layoutY="122.0" prefHeight="25.0" prefWidth="395.0" />
-                <AnchorPane layoutX="62.0" layoutY="175.0" prefHeight="196.0" prefWidth="479.0">
+                <AnchorPane layoutX="62.0" layoutY="175.0" prefHeight="181.0" prefWidth="479.0">
                     <CheckBox fx:id="logChatWebhookCheckbox" layoutX="14.0" layoutY="14.0" mnemonicParsing="false" text="Log Chat Messages" />
                     <CheckBox fx:id="logLocationWebhookCheckbox" layoutX="295.0" layoutY="62.0" mnemonicParsing="false" text="Send Locations" />
                     <CheckBox fx:id="logEntersLeavesWebhookCheckbox" layoutX="295.0" layoutY="14.0" mnemonicParsing="false" text="Log Enters/Leaves" />
@@ -40,8 +40,8 @@
                <TextField fx:id="discordUsernamesTextField" layoutX="17.0" layoutY="106.0" prefHeight="25.0" prefWidth="149.0" />
                <Label layoutX="17.0" layoutY="89.0" text="Discord User IDS:" />
                <Label layoutX="176.0" layoutY="110.0" text="You can separate User IDS by &quot;,&quot; to mention more than 1" />
-               <CheckBox fx:id="mentionLocationsWebhookCheckbox" layoutX="153.0" layoutY="62.0" mnemonicParsing="false" text="Mention Locations" onAction="#onClickMentions"/>
-               <CheckBox onAction="#hideWhispersClick" fx:id="hideWhispersWebhookCheckbox" layoutX="153.0" layoutY="14.0" mnemonicParsing="false" text="Don't Send Whispers" />
+               <CheckBox fx:id="mentionLocationsWebhookCheckbox" layoutX="153.0" layoutY="62.0" mnemonicParsing="false" onAction="#onClickMentions" text="Mention Locations" />
+               <CheckBox fx:id="hideWhispersWebhookCheckbox" layoutX="153.0" layoutY="14.0" mnemonicParsing="false" onAction="#hideWhispersClick" text="Don't Send Whispers" />
                <Label layoutX="176.0" layoutY="131.0" prefHeight="17.0" prefWidth="294.0" text="To get User IDs go to Advanced check Developer Mode" />
                <Label layoutX="176.0" layoutY="146.0" prefHeight="17.0" prefWidth="294.0" />
                <Label layoutX="176.0" layoutY="155.0" prefHeight="17.0" prefWidth="294.0" text="Right Click a Discord User and &quot;Copy User ID&quot;" />

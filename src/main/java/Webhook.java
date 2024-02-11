@@ -60,7 +60,7 @@ public class Webhook {
             }
 
             if (log.startsWith("[Join]")) {
-                builder.setUsername("Room Logger by Thauan " + new Random().nextInt(100));
+                builder.setUsername("Room Logger by Thauan (#" + player.getIndex() + ")");
                 WebhookEmbed embed = new WebhookEmbedBuilder()
                         .setColor(0x4CAF50)
                         .setDescription(player.getName() + " entered the room")
@@ -73,7 +73,7 @@ public class Webhook {
             }
 
             if (log.startsWith("[Leave]")) {
-                builder.setUsername("Room Logger by Thauan " + new Random().nextInt(100));
+                builder.setUsername("Room Logger by Thauan (#" + player.getIndex() + ")");
                 WebhookEmbed embed = new WebhookEmbedBuilder()
                         .setColor(0xF80000)
                         .setDescription(player.getName() + " has left the room")

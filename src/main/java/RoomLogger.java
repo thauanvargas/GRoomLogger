@@ -281,7 +281,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
                 String logChat = "[" + (isBot ? "BOT" : hash) + "] [" + currentDateTime + "] " + player.getName() + " : " + message;
                 logToFile(logChat);
-                if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot && !Objects.equals(hash, "Wired") && !hideWhispersWebhookCheckbox.isSelected()) {
+                if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot &&
+                        !Objects.equals(hash, "Wired") &&
+                        (!hideWhispersWebhookCheckbox.isSelected() && Objects.equals(hash, "Whisper"))) {
                     webhook.sendLog(logChat, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                 }
                 Platform.runLater(() -> {
@@ -646,7 +648,11 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             });
         } else {
             Platform.runLater(() -> {
-                webhookInfoLabel.setText("Please test the Webhook first!");
+                if(webhookUrlTextField.getText().isEmpty()) {
+                    webhookInfoLabel.setText("Please copy the webhook url to the field");
+                }else {
+                    webhookInfoLabel.setText("Please click TEST to test the Webhook first!");
+                }
             });
             webhookEnabled = false;
             enableWebhookCheckbox.setSelected(false);
