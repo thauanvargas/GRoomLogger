@@ -14,6 +14,7 @@ public class Player
     private int coordX = -1;
     private int coordY = -1;
     private Location location = null;
+    private String figureId = "";
     private boolean isBot = false;
     public Player(Integer id, Integer index, String name)
     {
@@ -74,5 +75,13 @@ public class Player
 
     public int getCoordY() {
         return coordY;
+    }
+
+    public String getFigureId() {
+        return figureId;
+    }
+
+    public void setFigureId(String figureId) {
+        this.figureId = figureId;
     }
 }
