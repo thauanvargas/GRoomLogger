@@ -17,5 +17,6 @@
       <CheckBox fx:id="logChatCheckbox" layoutX="374.0" layoutY="318.0" mnemonicParsing="false" text="Log Chat" />
       <CheckBox fx:id="logEntersLeavesCheckbox" layoutX="230.0" layoutY="318.0" mnemonicParsing="false" text="Log Enters/Leaves" />
       <CheckBox fx:id="logChatBotsCheckbox" layoutX="458.0" layoutY="318.0" mnemonicParsing="false" text="Log Chat Bots" />
+      <CheckBox fx:id="logUserActionsCheckbox" layoutX="95.0" layoutY="318.0" mnemonicParsing="false" text="Log User Actions" />
    </children>
 </AnchorPane>

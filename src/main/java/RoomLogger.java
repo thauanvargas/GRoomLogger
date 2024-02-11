@@ -44,6 +44,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public CheckBox logEntersLeavesCheckbox;
     public CheckBox logChatCheckbox;
     public CheckBox logChatBotsCheckbox;
+    public CheckBox logUserActionsCheckbox;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -112,13 +113,17 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         intercept(HMessage.Direction.TOCLIENT, "Whisper", this::onChat);
 
+        intercept(HMessage.Direction.TOCLIENT, "Dance", this::onDance);
+
+        intercept(HMessage.Direction.TOCLIENT, "Expression", this::onExpression);
+
     }
 
     private void onGetGuestRoomResult(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         boolean entered = hPacket.readBoolean();
         hPacket.readInteger();
-        roomName = hPacket.readString();
+        roomName = hPacket.readString(StandardCharsets.UTF_8);
 
         if (!entered) {
             Date currentDate = new Date();
@@ -183,6 +188,67 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     consoleTextArea.appendText(logChat + "\n");
                 });
             }
+        }
+    }
+
+    private void onExpression(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+        int index = hPacket.readInteger();
+        int expression = hPacket.readInteger();
+        Player player = findPlayerByIndex(index);
+
+        if(player != null && logUserActionsCheckbox.isSelected()) {
+            Date currentDate = new Date();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+            String currentDateTime = dateFormat.format(currentDate);
+            String expressionName = "";
+            if(expression == 1) {
+                expressionName = "Waved";
+            } else if (expression == 2) {
+                expressionName = "Sent a kiss";
+            } else if (expression == 3) {
+                expressionName = "Laugh";
+            } else if (expression == 5) {
+                expressionName = "Idled";
+            } else if (expression == 7) {
+                expressionName = "Did a Like";
+            }
+
+            if(expression != 4 && expression != 0) {
+                String logChat = "[ACTION] " + player.getName() + " " +  expressionName + " at " + currentDateTime;
+                logToFile(logChat);
+                Platform.runLater(() -> {
+                    consoleTextArea.appendText(logChat + "\n");
+                });
+            }
+        }
+    }
+    private void onDance(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+        int index = hPacket.readInteger();
+        int dance = hPacket.readInteger();
+        Player player = findPlayerByIndex(index);
+
+        if(player != null && logUserActionsCheckbox.isSelected()) {
+            Date currentDate = new Date();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+            String currentDateTime = dateFormat.format(currentDate);
+            String danceName = "";
+            if(dance == 1) {
+                danceName = "Hap-hop";
+            } else if (dance == 2) {
+                danceName = "Pogo-Mogo";
+            } else if (dance == 3) {
+                danceName = "Duck Funk";
+            } else if (dance == 4) {
+                danceName = "Rollie";
+            }
+
+            String logChat = "[ACTION] " + player.getName() + (!danceName.isEmpty() ? " started dancing " + danceName : " stopped dancing") + " at " + currentDateTime;
+            logToFile(logChat);
+            Platform.runLater(() -> {
+                consoleTextArea.appendText(logChat + "\n");
+            });
         }
     }
 
@@ -255,13 +321,26 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                     String currentDateTime = dateFormat.format(currentDate);
 
+
                     if (player == null) {
                         continue;
+                    }
+
+                    if(logUserActionsCheckbox.isSelected()) {
+                        if (hEntityUpdate.getSign() != null) {
+                            String log = "[ACTION] " + player.getName() + " showed sign " + hEntityUpdate.getSign() + "  at " + currentDateTime;
+                            logToFile(log);
+                            Platform.runLater(() -> {
+                                consoleTextArea.appendText(log + "\n");
+                            });
+                        }
                     }
 
                     if (location == null) {
                         continue;
                     }
+
+//                    if(logUserActionsCheckbox.isSelected()) {
 
 
                     if (player.getLocation() != null) {
