@@ -281,14 +281,21 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
                 String logChat = "[" + (isBot ? "BOT" : hash) + "] [" + currentDateTime + "] " + player.getName() + " : " + message;
                 logToFile(logChat);
-                if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot &&
-                        !Objects.equals(hash, "Wired") &&
-                        (!hideWhispersWebhookCheckbox.isSelected() && Objects.equals(hash, "Whisper"))) {
-                    webhook.sendLog(logChat, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                }
                 Platform.runLater(() -> {
                     consoleTextArea.appendText(logChat + "\n");
                 });
+                if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot &&
+                        !Objects.equals(hash, "Wired")) {
+
+                    boolean isWhisper = Objects.equals(hash, "Whisper");
+
+                    if (isWhisper && hideWhispersWebhookCheckbox.isSelected()) {
+                        return;
+                    }
+
+                    webhook.sendLog(logChat, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+
+                }
             }
         }
     }
@@ -448,7 +455,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         continue;
                     }
 
-                    if (hEntityUpdate.getAction() == HAction.Move) {
+                    if (hEntityUpdate.getAction() == HAction.Move || hEntityUpdate.getAction() == HAction.Sit) {
                         if (player.getLocation() != null) {
                             String log = getLocationLog(player, player.getLocation(), currentDateTime, true);
                             logToFile(log);
@@ -461,20 +468,20 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                             player.setLocation(null);
                             continue;
                         }
-                    }
 
-                    player.setCoordX(currentX);
-                    player.setCoordY(currentY);
+                        player.setCoordX(currentX);
+                        player.setCoordY(currentY);
 
-                    if (!location.isSitted() || (location.isSitted() && hStance == HStance.Sit)) {
-                        String log = getLocationLog(player, location, currentDateTime, false);
-                        logToFile(log);
-                        if (webhookEnabled) {
-                            webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+                        if (!location.isSitted() || (location.isSitted() && hStance == HStance.Sit)) {
+                            String log = getLocationLog(player, location, currentDateTime, false);
+                            logToFile(log);
+                            if (webhookEnabled) {
+                                webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+                            }
+                            Platform.runLater(() -> {
+                                consoleTextArea.appendText(log + "\n");
+                            });
                         }
-                        Platform.runLater(() -> {
-                            consoleTextArea.appendText(log + "\n");
-                        });
                     }
 
                     player.setLocation(location);
@@ -648,9 +655,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             });
         } else {
             Platform.runLater(() -> {
-                if(webhookUrlTextField.getText().isEmpty()) {
+                if (webhookUrlTextField.getText().isEmpty()) {
                     webhookInfoLabel.setText("Please copy the webhook url to the field");
-                }else {
+                } else {
                     webhookInfoLabel.setText("Please click TEST to test the Webhook first!");
                 }
             });
