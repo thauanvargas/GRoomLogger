@@ -10,15 +10,23 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.json.JSONObject;
 
+import java.awt.*;
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -776,5 +784,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }else {
             disabled = false;
         }
+    }
+
+    public void openTutorial(ActionEvent mouseEvent) throws IOException {
+        Desktop.getDesktop().browse(URI.create("https://www.iorad.com/player/2103034/Discord---How-to-copy-webhook-URL-#_"));
     }
 }
