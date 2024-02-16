@@ -8,21 +8,39 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
 
 <AnchorPane prefHeight="417.0" prefWidth="609.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="RoomLogger">
-    <TabPane prefHeight="417.0" prefWidth="609.0" tabClosingPolicy="UNAVAILABLE">
+    <TabPane prefHeight="417.0" prefWidth="744.0" tabClosingPolicy="UNAVAILABLE">
         <Tab text="Logger">
-            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="500" prefWidth="700.0">
-                <CheckBox fx:id="logLocationCheckbox" layoutX="51.0" layoutY="47.0" mnemonicParsing="false" text="Mark new Location" />
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="491.0" prefWidth="678.0">
                 <Label fx:id="infoLabel" layoutX="39.0" layoutY="363.0" prefHeight="17.0" prefWidth="531.0" text="Please Reload the Room for it to work properly." />
                 <TextArea fx:id="consoleTextArea" layoutX="39.0" layoutY="109.0" prefHeight="200.0" prefWidth="531.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #ffffff;" />
-                <TextField fx:id="customLocationNameTextField" layoutX="383.0" layoutY="43.0" />
-                <Label fx:id="customNameLabel" layoutX="298.0" layoutY="47.0" text="Custom Name" />
-                <CheckBox fx:id="isSittedLocationCheckbox" layoutX="195.0" layoutY="47.0" mnemonicParsing="false" text="is Sitted?" />
-                <CheckBox fx:id="logChatCheckbox" layoutX="374.0" layoutY="318.0" mnemonicParsing="false" text="Log Chat" />
-                <CheckBox fx:id="logEntersLeavesCheckbox" layoutX="230.0" layoutY="318.0" mnemonicParsing="false" text="Log Enters/Leaves" />
-                <CheckBox fx:id="logChatBotsCheckbox" layoutX="458.0" layoutY="318.0" mnemonicParsing="false" text="Log Chat Bots" />
-                <CheckBox fx:id="logUserActionsCheckbox" layoutX="95.0" layoutY="318.0" mnemonicParsing="false" text="Log User Actions" />
+            <CheckBox fx:id="disableLogWithHabboCheckbox" layoutX="289.0" layoutY="318.0" mnemonicParsing="false" onAction="#disableLogWithHabbo" prefHeight="17.0" prefWidth="281.0" text="Disable logging when logged with this Habbo" />
+            <Label layoutX="51.0" layoutY="318.0" text="Your Username:" />
+            <Label layoutX="143.0" layoutY="317.0" text="Erotico">
+                <font>
+                    <Font name="System Bold" size="15.0" />
+                </font>
+            </Label>
+            <AnchorPane layoutX="41.0" layoutY="26.0" prefHeight="66.0" prefWidth="528.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+               <children>
+                  <Label layoutX="14.0" layoutY="6.0" text="Setup Locations" />
+                      <CheckBox fx:id="logLocationCheckbox" layoutX="15.0" layoutY="32.0" mnemonicParsing="false" text="Mark new Location" />
+                      <CheckBox fx:id="isSittedLocationCheckbox" layoutX="154.0" layoutY="32.0" mnemonicParsing="false" text="is Sitted?" />
+                      <Label fx:id="customNameLabel" layoutX="245.0" layoutY="32.0" text="Name:" />
+                      <TextField fx:id="customLocationNameTextField" layoutX="295.0" layoutY="28.0" />
+               </children>
+            </AnchorPane>
+            <AnchorPane layoutX="580.0" layoutY="138.0" prefHeight="158.0" prefWidth="148.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+               <children>
+                      <CheckBox fx:id="logChatCheckbox" layoutX="14.0" layoutY="30.0" mnemonicParsing="false" text="Log Chat" />
+                      <CheckBox fx:id="logEntersLeavesCheckbox" layoutX="14.0" layoutY="55.0" mnemonicParsing="false" text="Log Enters/Leaves" />
+                      <CheckBox fx:id="logChatBotsCheckbox" layoutX="14.0" layoutY="79.0" mnemonicParsing="false" text="Log Chat Bots" />
+                      <CheckBox fx:id="logUserActionsCheckbox" layoutX="14.0" layoutY="104.0" mnemonicParsing="false" text="Log User Actions" />
+                  <Label layoutX="26.0" layoutY="6.0" text="Logging Options " />
+               </children>
+            </AnchorPane>
             </AnchorPane>
         </Tab>
         <Tab text="Webhook Configuration">
@@ -32,7 +50,7 @@
                 <CheckBox fx:id="enableWebhookCheckbox" layoutX="233.0" layoutY="34.0" mnemonicParsing="false" onAction="#toggleWebhookClick" text="Enable Discord Webhook" />
                 <Button fx:id="testWebhookCheckbox" layoutX="464.0" layoutY="122.0" mnemonicParsing="false" onAction="#testWebhookClick" text="TEST" />
                 <TextField fx:id="webhookUrlTextField" layoutX="62.0" layoutY="122.0" prefHeight="25.0" prefWidth="395.0" />
-                <AnchorPane layoutX="62.0" layoutY="175.0" prefHeight="181.0" prefWidth="479.0">
+                <AnchorPane layoutX="62.0" layoutY="175.0" prefHeight="181.0" prefWidth="487.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
                     <CheckBox fx:id="logChatWebhookCheckbox" layoutX="14.0" layoutY="14.0" mnemonicParsing="false" text="Log Chat Messages" />
                     <CheckBox fx:id="logLocationWebhookCheckbox" layoutX="295.0" layoutY="62.0" mnemonicParsing="false" text="Send Locations" />
                     <CheckBox fx:id="logEntersLeavesWebhookCheckbox" layoutX="295.0" layoutY="14.0" mnemonicParsing="false" text="Log Enters/Leaves" />
@@ -46,6 +64,8 @@
                <Label layoutX="176.0" layoutY="146.0" prefHeight="17.0" prefWidth="294.0" />
                <Label layoutX="176.0" layoutY="155.0" prefHeight="17.0" prefWidth="294.0" text="Right Click a Discord User and &quot;Copy User ID&quot;" />
                 </AnchorPane>
+            <Label layoutX="528.0" layoutY="101.0" text="This feature is used &#10;to send the logs to a Discord Channel.&#10;You can check how to &#10;create a Webhook here:&#10;" />
+            <Label layoutX="660.0" layoutY="152.0" text="Tutorial" />
             </AnchorPane>
         </Tab>
     </TabPane>

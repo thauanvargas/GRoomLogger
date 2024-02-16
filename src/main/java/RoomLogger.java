@@ -25,19 +25,13 @@ import java.util.logging.SimpleFormatter;
 
 @ExtensionInfo(
         Title = "Room Logger",
-        Description = "Save all your chat and more!",
-        Version = "1.0",
+        Description = "The Best Habbo Chat Logger",
+        Version = "1.1",
         Author = "Thauan"
 )
 
 public class RoomLogger extends ExtensionForm implements Initializable {
     private static final Logger logger = Logger.getLogger(RoomLogger.class.getName());
-
-    static {
-        System.setProperty("java.util.logging.SimpleFormatter.format", "RoomLogger: %5$s%n");
-        RoomLogger.setupFileLogger();
-    }
-
     public static Stage primaryStage;
     public CheckBox logLocationCheckbox;
     public CheckBox isSittedLocationCheckbox;
@@ -60,7 +54,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public TextField discordUsernamesTextField;
     public CheckBox mentionLocationsWebhookCheckbox;
     public CheckBox hideWhispersWebhookCheckbox;
-    private Webhook webhook = new Webhook();
+    public CheckBox disableLogWithHabboCheckbox;
+    private final Webhook webhook = new Webhook();
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -141,19 +136,30 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             webhook.setDiscordUsernames(discordUsernamesTextField.getText());
         });
 
+        disableLogWithHabboCheckbox.selectedProperty().addListener(observable -> {
+            if(Objects.equals(habboUserName, "")) {
+                disableLogWithHabboCheckbox.setSelected(!disableLogWithHabboCheckbox.isSelected());
+                return;
+            }
+            Cacher.put("disabledLog" + habboUserName, disableLogWithHabboCheckbox.isSelected());
+        }
+        );
+
     }
 
     protected String host;
     protected int habboId;
-    protected String habboUserName;
     protected int habboIndex = -1;
     protected List<Player> playerList = new ArrayList<>();
     protected List<Location> locationList = new ArrayList<>();
     protected GAsync gAsync;
+    public static String habboUserName;
     public boolean roomLoaded = false;
     public boolean initialEntryOnRoom = false;
     public String roomName = "";
     public boolean webhookEnabled = false;
+    public boolean loggerSetuped = false;
+    public boolean disabled = false;
 
 
     @Override
@@ -172,6 +178,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         logEntersLeavesCheckbox.setSelected(true);
 
         gAsync = new GAsync(this);
+
     }
 
     @Override
@@ -189,6 +196,22 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         intercept(HMessage.Direction.TOCLIENT, "UserObject", hMessage -> {
             habboId = hMessage.getPacket().readInteger();
             habboUserName = hMessage.getPacket().readString();
+            if(habboUserName != null && !loggerSetuped) {
+                System.setProperty("java.util.logging.SimpleFormatter.format", "RoomLogger: %5$s%n");
+                RoomLogger.setupFileLogger();
+                loggerSetuped = true;
+
+                new Thread(() -> {
+                    JSONObject cache = Cacher.getCacheContents();
+                    disableLogWithHabboCheckbox.setSelected(cache.optBoolean("disableLogWithHabbo" + habboUserName));
+
+                    if(disableLogWithHabboCheckbox.isSelected()) {
+                        disabled = true;
+                    }
+                }).start();
+
+
+            }
         });
 
         intercept(HMessage.Direction.TOCLIENT, "GetGuestRoomResult", this::onGetGuestRoomResult);
@@ -224,10 +247,12 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
             String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
-            if (webhookEnabled) {
+            if (webhookEnabled && !disabled) {
                 webhook.sendLog(logRoomReset, null, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
             }
-            logToFile(logRoomReset);
+            if(!disabled) {
+                logToFile(logRoomReset);
+            }
             Platform.runLater(() -> {
                 infoLabel.setText("Locations was resetted because room was reloaded.");
                 consoleTextArea.appendText(logRoomReset + "\n");
@@ -255,7 +280,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
 
     private void onChat(HMessage hMessage) {
-        if (roomLoaded && logChatCheckbox.isSelected()) {
+        if (roomLoaded && logChatCheckbox.isSelected() && !disabled) {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
             String message = hPacket.readString(StandardCharsets.UTF_8);
@@ -285,7 +310,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     consoleTextArea.appendText(logChat + "\n");
                 });
                 if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot &&
-                        !Objects.equals(hash, "Wired")) {
+                        !Objects.equals(hash, "Wired") && !disabled) {
 
                     boolean isWhisper = Objects.equals(hash, "Whisper");
 
@@ -306,7 +331,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         int expression = hPacket.readInteger();
         Player player = findPlayerByIndex(index);
 
-        if (player != null && logUserActionsCheckbox.isSelected()) {
+        if (player != null && logUserActionsCheckbox.isSelected() && !disabled) {
             Date currentDate = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
@@ -339,7 +364,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         int dance = hPacket.readInteger();
         Player player = findPlayerByIndex(index);
 
-        if (player != null && logUserActionsCheckbox.isSelected()) {
+        if (player != null && logUserActionsCheckbox.isSelected() && !disabled) {
             Date currentDate = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
@@ -399,14 +424,14 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                             } else {
                                 logEntered = "Player > " + player.getName() + " < is at the room on load ";
                             }
-                            if (logEntersLeavesCheckbox.isSelected()) {
+                            if (logEntersLeavesCheckbox.isSelected() && !disabled) {
                                 logToFile(logEntered);
                                 String finalLogEntered = logEntered;
                                 Platform.runLater(() -> {
                                     consoleTextArea.appendText(finalLogEntered + "\n");
                                 });
                             }
-                            if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !isInitial) {
+                            if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !isInitial && !disabled) {
                                 webhook.sendLog(logEntered, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                             }
                         } else {
@@ -459,7 +484,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         if (player.getLocation() != null) {
                             String log = getLocationLog(player, player.getLocation(), currentDateTime, true);
                             logToFile(log);
-                            if (webhookEnabled) {
+                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
                                 webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                             }
                             Platform.runLater(() -> {
@@ -475,7 +500,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         if (!location.isSitted() || (location.isSitted() && hStance == HStance.Sit)) {
                             String log = getLocationLog(player, location, currentDateTime, false);
                             logToFile(log);
-                            if (webhookEnabled) {
+                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
                                 webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                             }
                             Platform.runLater(() -> {
@@ -506,7 +531,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 String currentDateTime = dateFormat.format(currentDate);
                 String logLeave = "[Leave] Player > " + player.getName() + " < left the room at " + currentDateTime;
                 logToFile(logLeave);
-                if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected()) {
+                if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !disabled) {
                     webhook.sendLog(logLeave, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                 }
                 Platform.runLater(() -> {
@@ -574,6 +599,12 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                                 customLocationNameTextField.setText("");
                             });
                         }
+                    }else {
+                        Platform.runLater(() -> {
+                            logLocationCheckbox.setSelected(false);
+                            infoLabel.setText("I couldn't found a furni ID, please input a custom name to the Location and try again");
+                            customLocationNameTextField.setText("");
+                        });
                     }
                 } else {
                     Location location = getLocation(point.getX(), point.getY());
@@ -616,7 +647,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
 
         try {
-            FileHandler fileHandler = new FileHandler(logFolderPath + currentDateTime + "-log.txt", 0, 1, true);
+            FileHandler fileHandler = new FileHandler( logFolderPath + habboUserName + currentDateTime + "-log.txt", 0, 1, true);
             SimpleFormatter simpleFormatter = new SimpleFormatter();
             fileHandler.setFormatter(simpleFormatter);
 
@@ -739,4 +770,11 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
 
+    public void disableLogWithHabbo(ActionEvent actionEvent) {
+        if(disableLogWithHabboCheckbox.isSelected()) {
+            disabled = true;
+        }else {
+            disabled = false;
+        }
+    }
 }
