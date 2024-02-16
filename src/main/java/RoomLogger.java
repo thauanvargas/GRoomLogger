@@ -655,7 +655,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
 
         try {
-            FileHandler fileHandler = new FileHandler( logFolderPath + habboUserName + currentDateTime + "-log.txt", 0, 1, true);
+            FileHandler fileHandler = new FileHandler( logFolderPath + habboUserName + "-" + currentDateTime + "-log.txt", 0, 1, true);
             SimpleFormatter simpleFormatter = new SimpleFormatter();
             fileHandler.setFormatter(simpleFormatter);
 
