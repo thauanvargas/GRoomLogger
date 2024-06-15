@@ -2,16 +2,13 @@ public class Location
 {
     private int coordX;
     private int coordY;
-    private int furniId;
     private String customName = "";
-    private boolean isSitted;
 
-    public Location(int coordX, int coordY, int furniId, boolean isSitted)
+    public Location(int coordX, int coordY, String customName)
     {
         this.coordX = coordX;
         this.coordY = coordY;
-        this.furniId = furniId;
-        this.isSitted = isSitted;
+        this.customName = customName;
     }
     public int getCoordX() {
         return coordX;
@@ -19,10 +16,6 @@ public class Location
 
     public int getCoordY() {
         return coordY;
-    }
-
-    public int getFurniId() {
-        return furniId;
     }
 
     public String getCustomName() {
@@ -33,7 +26,4 @@ public class Location
         this.customName = customName;
     }
 
-    public boolean isSitted() {
-        return isSitted;
-    }
 }

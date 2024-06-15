@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="454.0" prefWidth="744.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="RoomLogger">
+       <Label fx:id="infoLabel" alignment="CENTER" layoutY="423.0" prefHeight="27.0" prefWidth="747.0" text="Please Reload the Room for it to work properly." textFill="#5a30ff">
+      <font>
+         <Font name="System Bold Italic" size="18.0" />
+      </font>
+   </Label>
+    <TabPane prefHeight="417.0" prefWidth="744.0" tabClosingPolicy="UNAVAILABLE">
+        <Tab text="Logger">
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="438.0" prefWidth="744.0">
+                <TextArea fx:id="consoleTextArea" layoutX="39.0" layoutY="28.0" prefHeight="281.0" prefWidth="531.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #ffffff;" />
+            <CheckBox fx:id="disableLogWithHabboCheckbox" layoutX="347.0" layoutY="319.0" mnemonicParsing="false" onAction="#disableLogWithHabbo" prefHeight="17.0" prefWidth="281.0" text="Disable logging when logged with this Habbo" />
+            <Label layoutX="51.0" layoutY="318.0" text="Your Username:" />
+            <Label fx:id="usernameLabel" layoutX="140.0" layoutY="318.0" text="PLEASE RELOAD ROOM !">
+                <font>
+                    <Font name="System Bold" size="12.0" />
+                </font>
+            </Label>
+                <AnchorPane layoutX="582.0" layoutY="35.0" prefHeight="267.0" prefWidth="148.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+                    <CheckBox fx:id="logChatCheckbox" layoutX="14.0" layoutY="30.0" mnemonicParsing="false" text="Log Chat" />
+                    <CheckBox fx:id="logEntersLeavesCheckbox" layoutX="14.0" layoutY="55.0" mnemonicParsing="false" text="Log Enters/Leaves" />
+                    <CheckBox fx:id="logChatBotsCheckbox" layoutX="14.0" layoutY="79.0" mnemonicParsing="false" text="Log Chat Bots" />
+                    <CheckBox fx:id="logUserActionsCheckbox" layoutX="14.0" layoutY="104.0" mnemonicParsing="false" text="Log User Actions" />
+                    <Label layoutX="26.0" layoutY="6.0" text="Logging Options " />
+                </AnchorPane>
+            </AnchorPane>
+        </Tab>
+        <Tab text="Webhook Configuration">
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                <Label fx:id="webhookInfoLabel" layoutX="21.0" layoutY="366.0" prefHeight="17.0" prefWidth="561.0" />
+                <Label layoutX="62.0" layoutY="98.0" text="Discord Webhook URL:" />
+                <CheckBox fx:id="enableWebhookCheckbox" layoutX="233.0" layoutY="34.0" mnemonicParsing="false" onAction="#toggleWebhookClick" text="Enable Discord Webhook" />
+                <Button fx:id="testWebhookCheckbox" layoutX="464.0" layoutY="122.0" mnemonicParsing="false" onAction="#testWebhookClick" text="TEST" />
+                <TextField fx:id="webhookUrlTextField" layoutX="62.0" layoutY="122.0" prefHeight="25.0" prefWidth="395.0" />
+                <AnchorPane layoutX="62.0" layoutY="175.0" prefHeight="181.0" prefWidth="487.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+                    <CheckBox fx:id="logChatWebhookCheckbox" layoutX="14.0" layoutY="14.0" mnemonicParsing="false" text="Log Chat Messages" />
+                    <CheckBox fx:id="logLocationWebhookCheckbox" layoutX="295.0" layoutY="62.0" mnemonicParsing="false" text="Send Locations" />
+                    <CheckBox fx:id="logEntersLeavesWebhookCheckbox" layoutX="295.0" layoutY="14.0" mnemonicParsing="false" text="Log Enters/Leaves" />
+               <CheckBox fx:id="mentionWhispersWebhookCheckbox" layoutX="17.0" layoutY="62.0" mnemonicParsing="false" onAction="#onClickMentions" text="Mention Whispers" />
+               <TextField fx:id="discordUsernamesTextField" layoutX="17.0" layoutY="106.0" prefHeight="25.0" prefWidth="149.0" />
+               <Label layoutX="17.0" layoutY="89.0" text="Discord User IDS:" />
+               <Label layoutX="176.0" layoutY="110.0" text="You can separate User IDS by &quot;,&quot; to mention more than 1" />
+               <CheckBox fx:id="mentionLocationsWebhookCheckbox" layoutX="153.0" layoutY="62.0" mnemonicParsing="false" onAction="#onClickMentions" text="Mention Locations" />
+               <CheckBox fx:id="hideWhispersWebhookCheckbox" layoutX="153.0" layoutY="14.0" mnemonicParsing="false" onAction="#hideWhispersClick" text="Don't Send Whispers" />
+               <Label layoutX="176.0" layoutY="131.0" prefHeight="17.0" prefWidth="294.0" text="To get User IDs go to Advanced check Developer Mode" />
+               <Label layoutX="176.0" layoutY="146.0" prefHeight="17.0" prefWidth="294.0" />
+               <Label layoutX="176.0" layoutY="155.0" prefHeight="17.0" prefWidth="294.0" text="Right Click a Discord User and &quot;Copy User ID&quot;" />
+                </AnchorPane>
+            <Label layoutX="528.0" layoutY="101.0" text="This feature is used &#10;to send the logs to a Discord Channel.&#10;You can check how to &#10;create a Webhook here:&#10;" />
+            <Hyperlink layoutX="658.0" layoutY="148.0" onAction="#openTutorial" text="Tutorial" />
+            </AnchorPane>
+        </Tab>
+        <Tab text="Log Locations">
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="491.0" prefWidth="678.0">
+                <AnchorPane layoutX="41.0" layoutY="26.0" prefHeight="66.0" prefWidth="528.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+                    <Label layoutX="14.0" layoutY="6.0" text="Setup Locations" />
+                    <CheckBox fx:id="logLocationCheckbox" layoutX="15.0" layoutY="32.0" mnemonicParsing="false" text="Add New Location" />
+                    <Label fx:id="customNameLabel" layoutX="159.0" layoutY="32.0" text="Custom Name:" />
+                    <TextField fx:id="customLocationNameTextField" layoutX="243.0" layoutY="28.0" prefHeight="25.0" prefWidth="219.0" />
+                </AnchorPane>
+                <AnchorPane layoutX="590.0" layoutY="138.0" prefHeight="104.0" prefWidth="86.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
+                    <Label layoutX="26.0" layoutY="6.0" />
+                    <Button onAction="#removeLogLocation" fx:id="removeLogLocation" layoutX="14.0" layoutY="13.0" mnemonicParsing="false" text="Remove" />
+               <Button onAction="#clearAllLogLocations"  fx:id="clearAllLogLocations" layoutX="14.0" layoutY="52.0" mnemonicParsing="false" text="Clear All" />
+                </AnchorPane>
+            <ListView fx:id="locationListView" layoutX="41.0" layoutY="138.0" prefHeight="135.0" prefWidth="527.0" />
+            <Label layoutX="41.0" layoutY="113.0" text="Marked Locations in this Room:" />
+            <TextArea fx:id="consoleLogLocations" layoutX="41.0" layoutY="285.0" prefHeight="81.0" prefWidth="528.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #ffffff;" />
+            </AnchorPane>
+        </Tab>
+    </TabPane>
+</AnchorPane>

@@ -14,7 +14,7 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
 
     @Override
     public ExtensionForm createForm(Stage primaryStage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/LogSeats.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/RoomLogger.fxml"));
         Parent root = loader.load();
 
         primaryStage.setTitle("Room Logger by Thauan");
@@ -33,7 +33,7 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
 
     @Override
     protected URL getFormResource() {
-        return getClass().getResource("/LogSeats.fxml");
+        return getClass().getResource("/RoomLogger.fxml");
     }
 
     @Override

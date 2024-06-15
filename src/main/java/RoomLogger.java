@@ -15,6 +15,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.awt.*;
@@ -30,11 +31,12 @@ import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.IntStream;
 
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.1",
+        Version = "1.2",
         Author = "Thauan"
 )
 
@@ -42,7 +44,6 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     private static final Logger logger = Logger.getLogger(RoomLogger.class.getName());
     public static Stage primaryStage;
     public CheckBox logLocationCheckbox;
-    public CheckBox isSittedLocationCheckbox;
     public TextField customLocationNameTextField;
     public TextArea consoleTextArea;
     public Label infoLabel;
@@ -64,6 +65,11 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public CheckBox hideWhispersWebhookCheckbox;
     public CheckBox disableLogWithHabboCheckbox;
     private final Webhook webhook = new Webhook();
+    public Label usernameLabel;
+    public ListView<String> locationListView;
+    public TextArea consoleLogLocations;
+    public Button clearAllLogLocations;
+    public Button removeLogLocation;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -95,10 +101,6 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 Cacher.put("logEntersLeaves", logEntersLeavesCheckbox.isSelected())
         );
 
-        isSittedLocationCheckbox.selectedProperty().addListener(observable ->
-                Cacher.put("isSitted", isSittedLocationCheckbox.isSelected())
-        );
-
         enableWebhookCheckbox.selectedProperty().addListener(observable ->
                 Cacher.put("enableWebhook", enableWebhookCheckbox.isSelected())
         );
@@ -116,7 +118,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         );
 
         logLocationCheckbox.selectedProperty().addListener(observable -> Platform.runLater(() -> {
-            infoLabel.setText("Please choose a Square in the room, if it's where a bench stays, let 'is Sitted?' checked");
+            if(logLocationCheckbox.isSelected()) {
+                infoLabel.setText("Please add a Custom Name (optional) and choose a Square in the room.");
+            }
         }));
 
         mentionWhispersWebhookCheckbox.selectedProperty().addListener(observable -> {
@@ -156,7 +160,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     protected String host;
-    protected int habboId;
+    protected int habboId = -1;
     protected int habboIndex = -1;
     protected List<Player> playerList = new ArrayList<>();
     protected List<Location> locationList = new ArrayList<>();
@@ -165,6 +169,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public boolean roomLoaded = false;
     public boolean initialEntryOnRoom = false;
     public String roomName = "";
+    public int roomId = -1;
     public boolean webhookEnabled = false;
     public boolean loggerSetuped = false;
     public boolean disabled = false;
@@ -172,13 +177,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     @Override
     protected void onStartConnection() {
-        new Thread(() -> {
-            sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
-        }).start();
-
-        isSittedLocationCheckbox.setSelected(true);
         consoleTextArea.setEditable(false);
-        isSittedLocationCheckbox.setDisable(true);
         logLocationCheckbox.setDisable(true);
         customLocationNameTextField.setDisable(true);
         customNameLabel.setDisable(true);
@@ -191,6 +190,10 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     @Override
     protected void onShow() {
+        new Thread(() -> {
+            sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
+        }).start();
+
         System.out.println("> https://www.youtube.com/watch?v=dQw4w9WgXcQ <");
     }
 
@@ -205,6 +208,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             habboId = hMessage.getPacket().readInteger();
             habboUserName = hMessage.getPacket().readString();
             if(habboUserName != null && !loggerSetuped) {
+                Platform.runLater(() -> {
+                    usernameLabel.setText(habboUserName);
+                });
                 System.setProperty("java.util.logging.SimpleFormatter.format", "RoomLogger: %5$s%n");
                 RoomLogger.setupFileLogger();
                 loggerSetuped = true;
@@ -247,15 +253,22 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     private void onGetGuestRoomResult(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         boolean entered = hPacket.readBoolean();
-        hPacket.readInteger();
+        roomId = hPacket.readInteger();
         roomName = hPacket.readString(StandardCharsets.UTF_8);
+
+        if(habboId == -1) {
+            new Thread(() -> {
+                sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
+            }).start();
+        }
+
 
         if (!entered) {
             Date currentDate = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
             String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
-            if (webhookEnabled && !disabled) {
+            if (webhookEnabled) {
                 webhook.sendLog(logRoomReset, null, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
             }
             if(!disabled) {
@@ -268,13 +281,28 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             roomLoaded = false;
             playerList.clear();
             locationList.clear();
+            Platform.runLater(() -> {
+                locationListView.getItems().clear();
+            });
+
         } else {
+            if(Cacher.get("logLocation" + roomId) != null) {
+                JSONArray jsonArray = (JSONArray) Cacher.get("logLocation" + roomId);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonLoc = jsonArray.getJSONObject(i);
+                    locationList.add(new Location(jsonLoc.getInt("x"), jsonLoc.getInt("y"), jsonLoc.getString("name")));
+                    Platform.runLater(() -> {
+                        locationListView.getItems().add("(" + jsonLoc.getInt("x") + ", " + jsonLoc.getInt("y") + ") " + jsonLoc.getString("name"));
+                    });
+                }
+
+                System.out.println(Arrays.toString(locationList.toArray()));
+            }
             initialEntryOnRoom = false;
         }
 
         if (!roomLoaded && !entered) {
             Platform.runLater(() -> {
-                isSittedLocationCheckbox.setDisable(false);
                 logLocationCheckbox.setDisable(false);
                 customLocationNameTextField.setDisable(false);
                 customNameLabel.setDisable(false);
@@ -288,7 +316,10 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
 
     private void onChat(HMessage hMessage) {
-        if (roomLoaded && logChatCheckbox.isSelected() && !disabled) {
+        if(disabled) {
+            return;
+        }
+        if (roomLoaded && logChatCheckbox.isSelected()) {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
             String message = hPacket.readString(StandardCharsets.UTF_8);
@@ -334,12 +365,15 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onExpression(HMessage hMessage) {
+        if(disabled) {
+            return;
+        }
         HPacket hPacket = hMessage.getPacket();
         int index = hPacket.readInteger();
         int expression = hPacket.readInteger();
         Player player = findPlayerByIndex(index);
 
-        if (player != null && logUserActionsCheckbox.isSelected() && !disabled) {
+        if (player != null && logUserActionsCheckbox.isSelected()) {
             Date currentDate = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
@@ -367,12 +401,15 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onDance(HMessage hMessage) {
+        if(disabled) {
+            return;
+        }
         HPacket hPacket = hMessage.getPacket();
         int index = hPacket.readInteger();
         int dance = hPacket.readInteger();
         Player player = findPlayerByIndex(index);
 
-        if (player != null && logUserActionsCheckbox.isSelected() && !disabled) {
+        if (player != null && logUserActionsCheckbox.isSelected()) {
             Date currentDate = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
             String currentDateTime = dateFormat.format(currentDate);
@@ -457,6 +494,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onUserUpdate(HMessage hMessage) {
+        if(disabled) {
+            return;
+        }
         if (roomLoaded) {
             try {
                 for (HEntityUpdate hEntityUpdate : HEntityUpdate.parse(hMessage.getPacket())) {
@@ -486,36 +526,40 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
                     if (location == null) {
                         continue;
-                    }
+                    }else {
+                        if(hEntityUpdate.getAction() == HAction.None || hEntityUpdate.getAction() == HAction.Sit) {
+                            player.setCoordX(currentX);
+                            player.setCoordY(currentY);
 
-                    if (hEntityUpdate.getAction() == HAction.Move || hEntityUpdate.getAction() == HAction.Sit) {
-                        if (player.getLocation() != null) {
-                            String log = getLocationLog(player, player.getLocation(), currentDateTime, true);
+                            String log = getLocationLog(player, location, currentDateTime, false, hEntityUpdate.getAction() == HAction.Sit);
                             logToFile(log);
                             if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
                                 webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
                             }
                             Platform.runLater(() -> {
                                 consoleTextArea.appendText(log + "\n");
+                                consoleLogLocations.appendText(log + "\n");
+                            });
+                        }
+                    }
+
+                    if (hEntityUpdate.getAction() == HAction.Move) {
+                        if (player.getLocation() != null) {
+                            String log = getLocationLog(player, player.getLocation(), currentDateTime, true, hEntityUpdate.getAction() == HAction.Sit);
+                            logToFile(log);
+                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
+                                webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+                            }
+                            Platform.runLater(() -> {
+                                consoleTextArea.appendText(log + "\n");
+                                consoleLogLocations.appendText(log + "\n");
                             });
                             player.setLocation(null);
                             continue;
                         }
 
-                        player.setCoordX(currentX);
-                        player.setCoordY(currentY);
-
-                        if (!location.isSitted() || (location.isSitted() && hStance == HStance.Sit)) {
-                            String log = getLocationLog(player, location, currentDateTime, false);
-                            logToFile(log);
-                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
-                                webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                            }
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                            });
-                        }
                     }
+
 
                     player.setLocation(location);
 
@@ -527,6 +571,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onUserRemove(HMessage hMessage) {
+        if(disabled) {
+            return;
+        }
         HPacket hPacket = hMessage.getPacket();
 
         String index = hPacket.readString();
@@ -551,23 +598,19 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     }
 
-    private static String getLocationLog(Player player, Location location, String currentDateTime, boolean left) {
+    private static String getLocationLog(Player player, Location location, String currentDateTime, boolean left, boolean sitted) {
         String log = "[Location] Player > " + player.getName() + " < ";
 
         if (left) {
             log += "left position of ";
         } else {
-            if (location.isSitted()) {
-                log += "sitted in ";
-            } else {
-                log += "stands in ";
-            }
+            log += sitted ? "sitted in " : "stands in ";
         }
 
         if (!location.getCustomName().isEmpty()) {
             log += location.getCustomName();
         } else {
-            log += "furni " + location.getFurniId();
+            log += "(" + location.getCoordX() + ", " + location.getCoordY() + ")";
         }
 
         log += " at " + currentDateTime;
@@ -587,47 +630,33 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     protected void onSetupLocation(HMessage hMessage) {
+        if(disabled) {
+            return;
+        }
         HPacket hPacket = hMessage.getPacket();
         HPoint point = new HPoint(hPacket.readInteger(), hPacket.readInteger());
 
         if (logLocationCheckbox.isSelected()) {
             new Thread(() -> {
-                if (customLocationNameTextField.getText().isEmpty()) {
-                    HPacket awaitingPacket = gAsync.awaitPacket(new AwaitingPacket("ClickFurni", HMessage.Direction.TOSERVER, 1000));
-
-                    if (awaitingPacket != null) {
-                        int furniId = awaitingPacket.readInteger();
-
-                        if (getLocation(point.getX(), point.getY()) == null) {
-                            Location location = new Location(point.getX(), point.getY(), furniId, isSittedLocationCheckbox.isSelected());
-                            locationList.add(location);
-                            Platform.runLater(() -> {
-                                logLocationCheckbox.setSelected(false);
-                                infoLabel.setText("Added Location at " + point.getX() + ", " + point.getY() + " with furni " + furniId + " [" + (isSittedLocationCheckbox.isSelected() ? "SITTED" : "STANDED") + "]");
-                                customLocationNameTextField.setText("");
-                            });
+                Location location = getLocation(point.getX(), point.getY());
+                if (location == null) {
+                    Location newLocation = new Location(point.getX(), point.getY(), customLocationNameTextField.getText());
+                    locationList.add(newLocation);
+                    Platform.runLater(() -> {
+                        logLocationCheckbox.setSelected(false);
+                        if(customLocationNameTextField.getText().isEmpty()) {
+                            infoLabel.setText("Added Location at (" + point.getX() + ", " + point.getY() + ")");
+                        } else {
+                            infoLabel.setText("Added Location at (" + point.getX() + ", " + point.getY() + ") with name " + customLocationNameTextField.getText());
                         }
-                    }else {
-                        Platform.runLater(() -> {
-                            logLocationCheckbox.setSelected(false);
-                            infoLabel.setText("I couldn't found a furni ID, please input a custom name to the Location and try again");
-                            customLocationNameTextField.setText("");
-                        });
-                    }
+                        locationListView.getItems().add("(" + point.getX() + ", " + point.getY() + ")" + " " + customLocationNameTextField.getText());
+                        customLocationNameTextField.setText("");
+
+                        saveLocationsToCache();
+                    });
+
                 } else {
-                    Location location = getLocation(point.getX(), point.getY());
-                    if (location == null) {
-                        Location newLocation = new Location(point.getX(), point.getY(), 0, isSittedLocationCheckbox.isSelected());
-                        newLocation.setCustomName(customLocationNameTextField.getText());
-                        locationList.add(newLocation);
-                        Platform.runLater(() -> {
-                            logLocationCheckbox.setSelected(false);
-                            infoLabel.setText("Added Location at " + point.getX() + ", " + point.getY() + " with custom name " + customLocationNameTextField.getText() + " [" + (isSittedLocationCheckbox.isSelected() ? "SITTED" : "STANDED") + "]");
-                            customLocationNameTextField.setText("");
-                        });
-                    } else {
-                        location.setCustomName(customLocationNameTextField.getText());
-                    }
+                    location.setCustomName(customLocationNameTextField.getText());
                 }
             }).start();
         }
@@ -751,7 +780,6 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         logChatCheckbox.setSelected(cache.optBoolean("logChat"));
         logChatBotsCheckbox.setSelected(cache.optBoolean("logChatBots"));
         logEntersLeavesCheckbox.setSelected(cache.optBoolean("logEntersLeaves"));
-        isSittedLocationCheckbox.setSelected(cache.optBoolean("isSittedLocation"));
 
         logChatWebhookCheckbox.setSelected(cache.optBoolean("logChatWebhook"));
         logLocationWebhookCheckbox.setSelected(cache.optBoolean("logLocationWebhook"));
@@ -788,5 +816,58 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     public void openTutorial(ActionEvent mouseEvent) throws IOException {
         Desktop.getDesktop().browse(URI.create("https://www.iorad.com/player/2103034/Discord---How-to-copy-webhook-URL-#_"));
+    }
+
+    public void clearAllLogLocations(ActionEvent actionEvent) {
+        locationList.clear();
+        Cacher.put("logLocation" + roomId, null);
+        Platform.runLater(() -> {
+            locationListView.getItems().clear();
+        });
+    }
+
+    public void removeLogLocation(ActionEvent actionEvent) {
+        if(locationListView.getSelectionModel().isEmpty()) {
+            Platform.runLater(() -> {
+                infoLabel.setText("Select a Location from the list first in order to remove.");
+            });
+            return;
+        }
+
+        String selectedItem = locationListView.getSelectionModel().getSelectedItem();
+        String[] parts = selectedItem.split("\\) ");
+        String coordinates = parts[0].substring(1); // Remove the opening parenthesis
+        String customLocName = parts[1];
+
+        String[] coords = coordinates.split(", ");
+        int x = Integer.parseInt(coords[0]);
+        int y = Integer.parseInt(coords[1]);
+
+        OptionalInt indexOpt = IntStream.range(0, locationList.size())
+                .filter(i -> locationList.get(i).getCoordX() == x && locationList.get(i).getCoordY() == y && locationList.get(i).getCustomName().equals(customLocName))
+                .findFirst();
+
+        if (indexOpt.isPresent()) {
+            int index = indexOpt.getAsInt();
+            locationList.remove(index);
+        } else {
+            System.out.println("Location not found!");
+        }
+
+        locationListView.getItems().remove(selectedItem);
+        saveLocationsToCache();
+    }
+
+    private void saveLocationsToCache() {
+        JSONArray jsonLocs = new JSONArray();
+        for (Location loc : locationList) {
+            JSONObject jsonLoc = new JSONObject();
+            jsonLoc.put("name", loc.getCustomName());
+            jsonLoc.put("x", loc.getCoordX());
+            jsonLoc.put("y", loc.getCoordY());
+            jsonLocs.put(jsonLoc);
+        }
+
+        Cacher.put("logLocation" + roomId, jsonLocs);
     }
 }
