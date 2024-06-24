@@ -314,8 +314,26 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     private void onFlatInfo(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         boolean entered = hPacket.readBoolean();
-        roomId = hPacket.readInteger();
-        roomName = hPacket.readString(StandardCharsets.UTF_8);
+        hPacket.readString();
+        hPacket.readString();
+        roomName = hPacket.readString();
+        System.out.println(roomName);
+
+        Date currentDate = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        String currentDateTime = dateFormat.format(currentDate);
+        String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
+        if (webhookEnabled) {
+            webhook.sendLog(logRoomReset, null, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+        }
+        if(!disabled) {
+            logToFile(logRoomReset);
+        }
+        Platform.runLater(() -> {
+            infoLabel.setText("Room Resetted.");
+            consoleTextArea.appendText(logRoomReset + "\n");
+        });
+
         roomLoaded = false;
     }
 
@@ -337,7 +355,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         roomName = hPacket.readString(StandardCharsets.UTF_8);
         System.out.println(roomName);
 
-        if(habboId == -1 && !isOrigins) {
+        if(habboId == -1) {
             new Thread(() -> {
                 sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
             }).start();
