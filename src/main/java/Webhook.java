@@ -52,7 +52,9 @@ public class Webhook {
 
         if(player != null) {
             builder.setUsername(player.getName());
-            builder.setAvatarUrl("https://www.habbo.com/habbo-imaging/avatarimage?size=l&figure=" + player.getFigureId() + "&direction=2&head_direction=2");
+            builder.setAvatarUrl(RoomLogger.isOrigins ?
+                    "https://pbs.twimg.com/profile_images/1801173556841050112/zJJ4JZKU_400x400.jpg" :
+                    "https://www.habbo.com/habbo-imaging/avatarimage?direction=2&head_direction=3&action=wav&gesture=sml&size=m&figure=" + player.getFigureId());
             if (log.startsWith("[Shout]")) {
                 builder.setContent("***" + log + "***");
             } else {
@@ -65,7 +67,9 @@ public class Webhook {
                         .setColor(0x4CAF50)
                         .setDescription(player.getName() + " entered the room")
                         .build();
-                builder.setAvatarUrl("https://www.habbo.com/habbo-imaging/avatarimage?direction=2&head_direction=3&action=wav&gesture=sml&size=m&figure=" + player.getFigureId());
+                builder.setAvatarUrl(RoomLogger.isOrigins ?
+                        "https://pbs.twimg.com/profile_images/1801173556841050112/zJJ4JZKU_400x400.jpg" :
+                        "https://www.habbo.com/habbo-imaging/avatarimage?direction=2&head_direction=3&action=wav&gesture=sml&size=m&figure=" + player.getFigureId());
                 builder.setContent("");
                 builder.addEmbeds(embed);
                 client.send(builder.build());
@@ -78,7 +82,9 @@ public class Webhook {
                         .setColor(0xF80000)
                         .setDescription(player.getName() + " has left the room")
                         .build();
-                builder.setAvatarUrl("https://www.habbo.com/habbo-imaging/avatarimage?direction=4&head_direction=3&gesture=sad&size=m&figure=" + player.getFigureId());
+                builder.setAvatarUrl(RoomLogger.isOrigins ?
+                        "https://pbs.twimg.com/profile_images/1801173556841050112/zJJ4JZKU_400x400.jpg" :
+                        "https://www.habbo.com/habbo-imaging/avatarimage?direction=2&head_direction=3&action=wav&gesture=sml&size=m&figure=" + player.getFigureId());
                 builder.setContent("");
                 builder.addEmbeds(embed);
                 client.send(builder.build());
@@ -114,6 +120,7 @@ public class Webhook {
 
     public void setDiscordUsernames(String discordUsernames) {
         this.discordUsernames = Arrays.stream(discordUsernames.split(","))
+                .map(String::trim)
                 .map(userId -> {
                     String formattedUsername = userId.startsWith("@") ? userId : "@" + userId;
                     return "<" + formattedUsername.toUpperCase() + ">";

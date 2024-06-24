@@ -23,7 +23,7 @@
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="438.0" prefWidth="744.0">
                 <TextArea fx:id="consoleTextArea" layoutX="39.0" layoutY="28.0" prefHeight="281.0" prefWidth="531.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #ffffff;" />
             <CheckBox fx:id="disableLogWithHabboCheckbox" layoutX="347.0" layoutY="319.0" mnemonicParsing="false" onAction="#disableLogWithHabbo" prefHeight="17.0" prefWidth="281.0" text="Disable logging when logged with this Habbo" />
-            <Label layoutX="51.0" layoutY="318.0" text="Your Username:" />
+            <Label fx:id="yourUserNameLabel" layoutX="51.0" layoutY="318.0" text="Your Username:" />
             <Label fx:id="usernameLabel" layoutX="140.0" layoutY="318.0" text="PLEASE RELOAD ROOM !">
                 <font>
                     <Font name="System Bold" size="12.0" />
@@ -63,7 +63,7 @@
             <Hyperlink layoutX="658.0" layoutY="148.0" onAction="#openTutorial" text="Tutorial" />
             </AnchorPane>
         </Tab>
-        <Tab text="Log Locations">
+        <Tab fx:id="locationsTab" text="Log Locations">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="491.0" prefWidth="678.0">
                 <AnchorPane layoutX="41.0" layoutY="26.0" prefHeight="66.0" prefWidth="528.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
                     <Label layoutX="14.0" layoutY="6.0" text="Setup Locations" />

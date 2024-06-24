@@ -1,6 +1,5 @@
 import gearth.extensions.ExtensionForm;
 import gearth.extensions.ExtensionInfo;
-import gearth.extensions.extra.tools.AwaitingPacket;
 import gearth.extensions.extra.tools.GAsync;
 import gearth.extensions.parsers.*;
 import gearth.misc.Cacher;
@@ -17,6 +16,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import parsers.OHEntity;
 
 import java.awt.*;
 import java.io.File;
@@ -36,7 +36,7 @@ import java.util.stream.IntStream;
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.2",
+        Version = "1.3",
         Author = "Thauan"
 )
 
@@ -70,6 +70,8 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public TextArea consoleLogLocations;
     public Button clearAllLogLocations;
     public Button removeLogLocation;
+    public Label yourUserNameLabel;
+    public Tab locationsTab;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -173,6 +175,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public boolean webhookEnabled = false;
     public boolean loggerSetuped = false;
     public boolean disabled = false;
+    public static boolean isOrigins = false;
 
 
     @Override
@@ -190,10 +193,20 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     @Override
     protected void onShow() {
-        new Thread(() -> {
-            sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
-        }).start();
-
+        if(!isOrigins) {
+            new Thread(() -> {
+                sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
+            }).start();
+        }else {
+            Platform.runLater(() -> {
+                yourUserNameLabel.setVisible(false);
+                usernameLabel.setVisible(false);
+                disableLogWithHabboCheckbox.setVisible(false);
+                logChatBotsCheckbox.setVisible(false);
+                locationsTab.setDisable(true);
+                logUserActionsCheckbox.setVisible(false);
+            });
+        }
         System.out.println("> https://www.youtube.com/watch?v=dQw4w9WgXcQ <");
     }
 
@@ -202,6 +215,12 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         onConnect((host, port, APIVersion, versionClient, client) -> {
             this.host = host.substring(5, 7);
+
+            System.out.println(host);
+            if (host.equals("game-obr.habbo.com") || host.equals("game-oes.habbo.com")
+                    || host.equals("game-ous.habbo.com")) {
+                isOrigins = true;
+            }
         });
 
         intercept(HMessage.Direction.TOCLIENT, "UserObject", hMessage -> {
@@ -248,20 +267,81 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         intercept(HMessage.Direction.TOCLIENT, "Expression", this::onExpression);
 
+        intercept(HMessage.Direction.TOCLIENT, "CHAT", this::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "CHAT_2", this::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "CHAT_3", this::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "USERS", this::onUsersOrigin);
+
+        intercept(HMessage.Direction.TOCLIENT, "FLATINFO", this::onFlatInfo);
+
+        intercept(HMessage.Direction.TOCLIENT, "ROOM_READY", this::onRoomReady);
+
+        intercept(HMessage.Direction.TOCLIENT, "LOGOUT", this::onUserRemove);
+
+        intercept(HMessage.Direction.TOCLIENT, "STATUS", this::onStatus);
+
+
     }
 
-    private void onGetGuestRoomResult(HMessage hMessage) {
+    private void onStatus(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+
+        hPacket.readInteger();
+        int index = hPacket.readInteger();
+        int x = hPacket.readInteger();
+        int y = hPacket.readInteger();
+        String z = hPacket.readString();
+    }
+
+    private void onRoomReady(HMessage hMessage) {
+        if (!roomLoaded) {
+            Platform.runLater(() -> {
+                logLocationCheckbox.setDisable(false);
+                customLocationNameTextField.setDisable(false);
+                customNameLabel.setDisable(false);
+                infoLabel.setText("Room was loaded, extension ready, any question ask in discord > thauanvargas <");
+            });
+            roomLoaded = true;
+            initialEntryOnRoom = true;
+        }
+        playerList.clear();
+        locationList.clear();
+    }
+
+    private void onFlatInfo(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         boolean entered = hPacket.readBoolean();
         roomId = hPacket.readInteger();
         roomName = hPacket.readString(StandardCharsets.UTF_8);
+        roomLoaded = false;
+    }
 
-        if(habboId == -1) {
+    private void onChatOrigins(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+        int index = hPacket.readInteger();
+        String message = hPacket.readString(StandardCharsets.UTF_8);
+
+        System.out.println(message);
+    }
+
+    private void onGetGuestRoomResult(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+
+        boolean entered = hPacket.readBoolean();
+        System.out.println(entered);
+        roomId = hPacket.readInteger();
+        System.out.println(roomId);
+        roomName = hPacket.readString(StandardCharsets.UTF_8);
+        System.out.println(roomName);
+
+        if(habboId == -1 && !isOrigins) {
             new Thread(() -> {
                 sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
             }).start();
         }
-
 
         if (!entered) {
             Date currentDate = new Date();
@@ -323,8 +403,11 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
             String message = hPacket.readString(StandardCharsets.UTF_8);
-            hPacket.readInteger();
-            int bubble = hPacket.readInteger();
+            int bubble = -1;
+            if(!isOrigins) {
+                hPacket.readInteger();
+                bubble = hPacket.readInteger();
+            }
             Player player = findPlayerByIndex(index);
 
             if (player != null) {
@@ -341,6 +424,18 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                     if (bubble == 34) {
                         hash = "Wired";
                     }
+                }
+
+                if (Objects.equals(hash, "CHAT_2")) {
+                    hash = "Whisper";
+                }
+
+                if (Objects.equals(hash, "CHAT_3")) {
+                    hash = "Shout";
+                }
+
+                if (Objects.equals(hash, "CHAT")) {
+                    hash = "Chat";
                 }
 
                 String logChat = "[" + (isBot ? "BOT" : hash) + "] [" + currentDateTime + "] " + player.getName() + " : " + message;
@@ -432,14 +527,16 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
     }
 
-    private void onUsers(HMessage hMessage) {
+
+    private void onUsersOrigin(HMessage hMessage) {
         new Thread(() -> {
             boolean isInitial = initialEntryOnRoom;
             if (roomLoaded) {
                 try {
                     HPacket hPacket = hMessage.getPacket();
-                    HEntity[] roomUsersList = HEntity.parse(hPacket);
-                    for (HEntity hEntity : roomUsersList) {
+                    OHEntity[] roomUsersList = OHEntity.parse(hPacket);
+
+                    for (OHEntity hEntity : roomUsersList) {
                         if (hEntity.getName().equals(habboUserName)) {
                             habboIndex = hEntity.getIndex();
                         }
@@ -447,8 +544,12 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                         if (hEntity.getEntityType() == HEntityType.PET) {
                             continue;
                         }
+                        Player player;
+                        if(!isOrigins)
+                            player = findPlayerById(hEntity.getId());
+                        else
+                            player = findPlayerByUserName(hEntity.getName());
 
-                        Player player = findPlayerById(hEntity.getId());
 
                         if (player == null) {
                             player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
@@ -489,6 +590,78 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+            if(isOrigins && isInitial) {
+                initialEntryOnRoom = false;
+            }
+        }).start();
+    }
+
+    private void onUsers(HMessage hMessage) {
+        new Thread(() -> {
+            boolean isInitial = initialEntryOnRoom;
+            if (roomLoaded) {
+                try {
+                    HPacket hPacket = hMessage.getPacket();
+                    HEntity[] roomUsersList = HEntity.parse(hPacket);
+
+                    for (HEntity hEntity : roomUsersList) {
+                        if (hEntity.getName().equals(habboUserName)) {
+                            habboIndex = hEntity.getIndex();
+                        }
+
+                        if (hEntity.getEntityType() == HEntityType.PET) {
+                            continue;
+                        }
+                        Player player;
+                        if(!isOrigins)
+                            player = findPlayerById(hEntity.getId());
+                        else
+                            player = findPlayerByUserName(hEntity.getName());
+
+
+                        if (player == null) {
+                            player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
+                            if (hEntity.getEntityType() == HEntityType.BOT || hEntity.getEntityType() == HEntityType.OLD_BOT) {
+                                player.setBot(true);
+                            } else {
+                                player.setFigureId(hEntity.getFigureId());
+                            }
+                            player.setCoordX(-1);
+                            player.setCoordY(-1);
+                            playerList.add(player);
+                            Date currentDate = new Date();
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+                            String currentDateTime = dateFormat.format(currentDate);
+                            String logEntered = "";
+                            if (!isInitial) {
+                                logEntered = "[Join] Player > " + player.getName() + " < entered the room at " + currentDateTime;
+                            } else {
+                                logEntered = "Player > " + player.getName() + " < is at the room on load ";
+                            }
+                            if (logEntersLeavesCheckbox.isSelected() && !disabled) {
+                                logToFile(logEntered);
+                                String finalLogEntered = logEntered;
+                                Platform.runLater(() -> {
+                                    consoleTextArea.appendText(finalLogEntered + "\n");
+                                });
+                            }
+                            if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !isInitial && !disabled) {
+                                webhook.sendLog(logEntered, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
+                            }
+                        } else {
+                            player.setFigureId(hEntity.getFigureId());
+                            player.setIndex(hEntity.getIndex());
+                            player.setCoordX(-1);
+                            player.setCoordY(-1);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            if(isOrigins && isInitial) {
+                initialEntryOnRoom = false;
             }
         }).start();
     }
@@ -571,13 +744,24 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     }
 
     private void onUserRemove(HMessage hMessage) {
-        if(disabled) {
+        if(disabled || !roomLoaded) {
             return;
         }
         HPacket hPacket = hMessage.getPacket();
 
-        String index = hPacket.readString();
-        Player player = findPlayerByIndex(Integer.parseInt(index));
+        Player player;
+        int index;
+
+        if(!isOrigins) {
+            String indexString = hPacket.readString();
+            index = Integer.parseInt(indexString);
+        }else {
+            String indexString = hPacket.toString();
+            String result = indexString.substring(indexString.lastIndexOf(']') + 1);
+            index = Integer.parseInt(result);
+        }
+
+        player = findPlayerByIndex(index);
 
         if (player != null) {
             if (logEntersLeavesCheckbox.isSelected()) {
@@ -623,6 +807,10 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
     protected Player findPlayerById(int id) {
         return playerList.stream().filter(player -> player.getId() == id).findFirst().orElse(null);
+    }
+
+    protected Player findPlayerByUserName(String userName) {
+        return playerList.stream().filter(player -> Objects.equals(player.getName(), userName)).findFirst().orElse(null);
     }
 
     protected Player findPlayerByIndex(int index) {
@@ -684,7 +872,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
 
         try {
-            FileHandler fileHandler = new FileHandler( logFolderPath + habboUserName + "-" + currentDateTime + "-log.txt", 0, 1, true);
+            FileHandler fileHandler = new FileHandler( logFolderPath + (isOrigins ? "origins-" : "") + habboUserName + "-" + currentDateTime + "-log.txt", 0, 1, true);
             SimpleFormatter simpleFormatter = new SimpleFormatter();
             fileHandler.setFormatter(simpleFormatter);
 
