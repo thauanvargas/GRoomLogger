@@ -12,12 +12,7 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="454.0" prefWidth="744.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="RoomLogger">
-       <Label fx:id="infoLabel" alignment="CENTER" layoutY="423.0" prefHeight="27.0" prefWidth="747.0" text="Please Reload the Room for it to work properly." textFill="#5a30ff">
-      <font>
-         <Font name="System Bold Italic" size="18.0" />
-      </font>
-   </Label>
+<AnchorPane prefHeight="420.0" prefWidth="725.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="RoomLogger">
     <TabPane prefHeight="417.0" prefWidth="744.0" tabClosingPolicy="UNAVAILABLE">
         <Tab text="Logger">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="438.0" prefWidth="744.0">
@@ -36,6 +31,17 @@
                     <CheckBox fx:id="logUserActionsCheckbox" layoutX="14.0" layoutY="104.0" mnemonicParsing="false" text="Log User Actions" />
                     <Label layoutX="26.0" layoutY="6.0" text="Logging Options " />
                 </AnchorPane>
+                <Label fx:id="infoLabel" alignment="CENTER" layoutX="-1.0" layoutY="361.0" prefHeight="27.0" prefWidth="747.0" text="Please reload the Room to start the extension." textFill="#3100f5">
+               <font>
+                  <Font name="System Bold Italic" size="18.0" />
+               </font>
+            </Label>
+            <Label layoutX="39.0" layoutY="6.0" text="Version:" />
+            <Label fx:id="clientVersionLabel" layoutX="85.0" layoutY="5.0" text="FLASH">
+               <font>
+                  <Font name="System Bold" size="13.0" />
+               </font>
+            </Label>
             </AnchorPane>
         </Tab>
         <Tab text="Webhook Configuration">
@@ -63,7 +69,7 @@
             <Hyperlink layoutX="658.0" layoutY="148.0" onAction="#openTutorial" text="Tutorial" />
             </AnchorPane>
         </Tab>
-        <Tab fx:id="locationsTab" text="Log Locations">
+        <Tab fx:id="locationsTab" text="Track Players Locations">
             <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="491.0" prefWidth="678.0">
                 <AnchorPane layoutX="41.0" layoutY="26.0" prefHeight="66.0" prefWidth="528.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
                     <Label layoutX="14.0" layoutY="6.0" text="Setup Locations" />
@@ -73,8 +79,8 @@
                 </AnchorPane>
                 <AnchorPane layoutX="590.0" layoutY="138.0" prefHeight="104.0" prefWidth="86.0" style="-fx-border-width: 1px; -fx-border-style: solid; -fx-border-color: lightgrey; -fx-border-radius: 5px;">
                     <Label layoutX="26.0" layoutY="6.0" />
-                    <Button onAction="#removeLogLocation" fx:id="removeLogLocation" layoutX="14.0" layoutY="13.0" mnemonicParsing="false" text="Remove" />
-               <Button onAction="#clearAllLogLocations"  fx:id="clearAllLogLocations" layoutX="14.0" layoutY="52.0" mnemonicParsing="false" text="Clear All" />
+                    <Button fx:id="removeLogLocation" layoutX="14.0" layoutY="13.0" mnemonicParsing="false" onAction="#removeLogLocation" text="Remove" />
+               <Button fx:id="clearAllLogLocations" layoutX="14.0" layoutY="52.0" mnemonicParsing="false" onAction="#clearAllLogLocations" text="Clear All" />
                 </AnchorPane>
             <ListView fx:id="locationListView" layoutX="41.0" layoutY="138.0" prefHeight="135.0" prefWidth="527.0" />
             <Label layoutX="41.0" layoutY="113.0" text="Marked Locations in this Room:" />

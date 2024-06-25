@@ -5,6 +5,7 @@ import gearth.extensions.parsers.*;
 import gearth.misc.Cacher;
 import gearth.protocol.HMessage;
 import gearth.protocol.HPacket;
+import gearth.protocol.packethandler.shockwave.packets.ShockPacketOutgoing;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
@@ -72,6 +73,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public Button removeLogLocation;
     public Label yourUserNameLabel;
     public Tab locationsTab;
+    public Label clientVersionLabel;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -197,14 +199,20 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             new Thread(() -> {
                 sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
             }).start();
-        }else {
             Platform.runLater(() -> {
-                yourUserNameLabel.setVisible(false);
-                usernameLabel.setVisible(false);
-                disableLogWithHabboCheckbox.setVisible(false);
+                clientVersionLabel.setText("FLASH");
+            });
+        }else {
+            new Thread(() -> {
+                sendToServer(new ShockPacketOutgoing("{out:INFORETRIEVE}"));
+            }).start();
+            Platform.runLater(() -> {
+                clientVersionLabel.setText("Origins");
                 logChatBotsCheckbox.setVisible(false);
                 locationsTab.setDisable(true);
                 logUserActionsCheckbox.setVisible(false);
+                mentionLocationsWebhookCheckbox.setDisable(true);
+                logLocationWebhookCheckbox.setDisable(true);
             });
         }
         System.out.println("> https://www.youtube.com/watch?v=dQw4w9WgXcQ <");
@@ -216,9 +224,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         onConnect((host, port, APIVersion, versionClient, client) -> {
             this.host = host.substring(5, 7);
 
-            System.out.println(host);
-            if (host.equals("game-obr.habbo.com") || host.equals("game-oes.habbo.com")
-                    || host.equals("game-ous.habbo.com")) {
+            if (Objects.equals(versionClient, "SHOCKWAVE")) {
                 isOrigins = true;
             }
         });
@@ -283,7 +289,55 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         intercept(HMessage.Direction.TOCLIENT, "STATUS", this::onStatus);
 
+        intercept(HMessage.Direction.TOCLIENT, "USER_OBJ", this::onUserObject);
 
+
+    }
+
+    private void onUserObject(HMessage hMessage) {
+        HPacket hPacket = hMessage.getPacket();
+        final byte[] dataRemainder = hPacket.readBytes(hPacket.length() - hPacket.getReadIndex());
+        final String data = new String(dataRemainder, StandardCharsets.ISO_8859_1);
+
+        String[] pairs = data.split("\r");
+
+        String nameValue = null;
+
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length == 2 && keyValue[0].equals("name")) {
+                nameValue = keyValue[1];
+                break;
+            }
+        }
+
+        habboUserName = nameValue;
+
+        if(habboUserName != null && !loggerSetuped) {
+            Platform.runLater(() -> {
+                usernameLabel.setText(habboUserName);
+            });
+
+            System.setProperty("java.util.logging.SimpleFormatter.format", "RoomLogger: %5$s%n");
+            RoomLogger.setupFileLogger();
+            loggerSetuped = true;
+
+            new Thread(() -> {
+                JSONObject cache = Cacher.getCacheContents();
+
+                disableLogWithHabboCheckbox.setSelected(cache.optBoolean("disabledLog" + habboUserName));
+
+                if(disableLogWithHabboCheckbox.isSelected()) {
+                    disabled = true;
+                }
+            }).start();
+
+
+        }
+
+        Platform.runLater(() -> {
+            usernameLabel.setText(habboUserName);
+        });
     }
 
     private void onStatus(HMessage hMessage) {
@@ -335,14 +389,6 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         });
 
         roomLoaded = false;
-    }
-
-    private void onChatOrigins(HMessage hMessage) {
-        HPacket hPacket = hMessage.getPacket();
-        int index = hPacket.readInteger();
-        String message = hPacket.readString(StandardCharsets.UTF_8);
-
-        System.out.println(message);
     }
 
     private void onGetGuestRoomResult(HMessage hMessage) {
@@ -420,13 +466,15 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         if (roomLoaded && logChatCheckbox.isSelected()) {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
-            String message = hPacket.readString(StandardCharsets.UTF_8);
+            String message = hPacket.readString(isOrigins ? StandardCharsets.ISO_8859_1 : StandardCharsets.UTF_8);
             int bubble = -1;
             if(!isOrigins) {
                 hPacket.readInteger();
                 bubble = hPacket.readInteger();
             }
             Player player = findPlayerByIndex(index);
+
+
 
             if (player != null) {
                 boolean isBot = player.isBot();
@@ -774,9 +822,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             String indexString = hPacket.readString();
             index = Integer.parseInt(indexString);
         }else {
-            String indexString = hPacket.toString();
-            String result = indexString.substring(indexString.lastIndexOf(']') + 1);
-            index = Integer.parseInt(result);
+            final byte[] dataRemainder = hPacket.readBytes(hPacket.getBytesLength() - hPacket.getReadIndex());
+            final String data = new String(dataRemainder, StandardCharsets.ISO_8859_1);
+            index = Integer.parseInt(data);
         }
 
         player = findPlayerByIndex(index);
@@ -995,6 +1043,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         mentionLocationsWebhookCheckbox.setSelected(cache.optBoolean("mentionLocationsWebhook"));
         mentionWhispersWebhookCheckbox.setSelected(cache.optBoolean("mentionWhispersWebhook"));
+
 
         if (enableWebhookCheckbox.isSelected()) {
             webhookEnabled = true;
