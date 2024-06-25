@@ -37,7 +37,7 @@ import java.util.stream.IntStream;
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.3",
+        Version = "1.3.1-beta",
         Author = "Thauan"
 )
 
