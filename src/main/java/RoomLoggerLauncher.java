@@ -16,12 +16,16 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
     public ExtensionForm createForm(Stage primaryStage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/RoomLogger.fxml"));
         Parent root = loader.load();
+        root.getStyleClass().add("root");
 
         primaryStage.setTitle("Room Logger by Thauan");
         primaryStage.setScene(new Scene(root));
-        primaryStage.setResizable(false);
+        primaryStage.setResizable(true);
         primaryStage.setAlwaysOnTop(true);
         primaryStage.getIcons().add(new Image("icon.png"));
+        primaryStage.getScene().getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
+        primaryStage.setMinWidth(800);
+        primaryStage.setMinHeight(450);
 
         return loader.getController();
     }
@@ -34,12 +38,6 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
     @Override
     protected URL getFormResource() {
         return getClass().getResource("/RoomLogger.fxml");
-    }
-
-    @Override
-    protected void initialize(Stage primaryStage) {
-        RoomLogger.primaryStage = primaryStage;
-        primaryStage.getScene().getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
     }
 
     public static void main(String[] args) {

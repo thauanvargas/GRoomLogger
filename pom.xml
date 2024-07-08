@@ -85,7 +85,7 @@
         <dependency>
             <groupId>G-Earth</groupId>
             <artifactId>G-Earth</artifactId>
-            <version>1.5.4</version>
+            <version>1.5.4-beta-6</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>

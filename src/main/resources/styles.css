@@ -1,0 +1,65 @@
+.root {
+    -fx-font-family: 'VolterGoldfish';
+    -fx-background-color: #1e2124;
+    -fx-text-fill: white;
+}
+
+.check-box > .box {
+    -fx-background-radius: 3;
+    -fx-padding: 0.166667em 0.166667em 0.25em 0.25em;
+    /*-fx-padding:0;*/
+    -fx-border-color: #56c0e0;
+    -fx-border-radius: 3;
+    -fx-background-color: #222222;
+}
+.check-box > .box > .mark {
+    -fx-background-color: null;
+    -fx-padding: 0.416667em 0.416667em 0.5em 0.5em; /* 5 5 6 6 */
+    -fx-shape: "M927.936 272.992l-68.288-68.288c-12.608-12.576-32.96-12.576-45.536 0l-409.44 409.44-194.752-196.16c-12.576-12.576-32.928-12.576-45.536 0l-68.288 68.288c-12.576 12.608-12.576 32.96 0 45.536l285.568 287.488c12.576 12.576 32.96 12.576 45.536 0l500.736-500.768c12.576-12.544 12.576-32.96 0-45.536z";
+    -fx-background-insets: -3 -3 1 0;
+}
+.check-box {
+    -fx-label-padding: 0.2em 0.0em 0.3em 0.416667em; /* 0 0 0 5 */
+    -fx-text-fill: #f0f0f0;
+    -fx-padding: 0 0 2 0;
+}
+.check-box:indeterminate > .box {
+    -fx-padding: 0;
+}
+.check-box:selected > .box > .mark {
+    -fx-background-color: linear-gradient(to bottom, #56c0e0, #40b8dc);
+}
+
+.label {
+    -fx-text-fill: #f0f0f0;
+}
+
+.tab-pane {
+    -fx-background-color: #1e2124;
+}
+
+.tab-pane .tab-header-background {
+    -fx-background-color: #1e2124;
+}
+
+.tab-pane .tab-content-area {
+    -fx-background-color: #1e2124;
+}
+
+.tab {
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+}
+
+.tab:selected {
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
