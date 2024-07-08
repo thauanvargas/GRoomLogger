@@ -63,3 +63,20 @@
     -fx-border-color: transparent;
 }
 
+.button {
+    -fx-background-color: #222222, linear-gradient(to bottom, #3a9cb7, #2a8ca9);
+    -fx-background-radius: 3;
+    -fx-border-color: #3a9cb7;
+    -fx-border-radius: 3;
+    -fx-text-fill: #f0f0f0;
+    -fx-padding: 0.416667em 0.416667em 0.5em 0.5em; /* Adjust padding to match CheckBox */
+}
+
+.button:hover {
+    -fx-background-color: #333333, linear-gradient(to bottom, #3a9cb7, #2a8ca9);
+}
+
+.button:pressed {
+    -fx-background-color: #555555, linear-gradient(to bottom, #3a9cb7, #2a8ca9);
+    -fx-padding: 0.5em 0.5em 0.416667em 0.416667em; /* Slightly change padding for a pressed effect */
+}

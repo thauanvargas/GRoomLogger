@@ -21,7 +21,7 @@ public class RoomLoggerLauncher extends ThemedExtensionFormCreator {
         primaryStage.setTitle("Room Logger by Thauan");
         primaryStage.setScene(new Scene(root));
         primaryStage.setResizable(true);
-        primaryStage.setAlwaysOnTop(true);
+        primaryStage.setAlwaysOnTop(false);
         primaryStage.getIcons().add(new Image("icon.png"));
         primaryStage.getScene().getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles.css")).toExternalForm());
         primaryStage.setMinWidth(800);

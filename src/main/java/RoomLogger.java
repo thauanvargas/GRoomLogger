@@ -9,12 +9,18 @@ import gearth.protocol.packethandler.shockwave.packets.ShockPacketOutgoing;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,7 +44,7 @@ import java.util.stream.IntStream;
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.3.2",
+        Version = "1.3.3-beta",
         Author = "Thauan"
 )
 
@@ -75,6 +81,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public Label yourUserNameLabel;
     public Tab locationsTab;
     public Label clientVersionLabel;
+    public Button focusButton;
     private OriginsInterceptor originsInterceptor;
     private FlashInterceptor flashInterceptor;
     String roomOwner;
@@ -571,5 +578,40 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 }
             });
         }
+    }
+
+
+    public void focusMode() {
+        Pane originalParent = (Pane) consoleTextArea.getParent();
+
+        int originalIndex = originalParent.getChildren().indexOf(consoleTextArea);
+
+
+        if (originalParent != null) {
+            originalParent.getChildren().remove(consoleTextArea);
+        }
+
+        VBox root = new VBox(consoleTextArea);
+        VBox.setVgrow(consoleTextArea, Priority.ALWAYS);
+        Scene scene = new Scene(root, 800, 600);
+        Stage newStage = new Stage();
+        newStage.setScene(scene);
+        newStage.setAlwaysOnTop(true);
+        newStage.initModality(Modality.WINDOW_MODAL);
+        newStage.initOwner(primaryStage);
+        focusButton.setDisable(true);
+
+        javafx.scene.image.Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
+        newStage.getIcons().add(icon);
+        newStage.setTitle("FOCUS MODE - Room Logger by Thauan");
+
+        newStage.setOnCloseRequest(e -> {
+            if (originalParent != null) {
+                originalParent.getChildren().add(originalIndex, consoleTextArea);
+                focusButton.setDisable(false);
+            }
+        });
+
+        newStage.show();
     }
 }

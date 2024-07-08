@@ -75,17 +75,22 @@ public class OriginsInterceptor {
     void onFlatInfo(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         boolean entered = hPacket.readBoolean();
-        roomLogger.roomOwner = hPacket.readString().substring(4);
+        String previousOwner = roomLogger.roomOwner;
+        roomLogger.roomOwner = hPacket.readString();
         System.out.println(roomLogger.roomOwner);
         System.out.println(hPacket.readString());
         roomLogger.roomName = hPacket.readString();
         System.out.println(roomLogger.roomName);
 
+        if(Objects.equals(roomLogger.roomOwner, previousOwner)) {
+            return;
+        }
+
         Date currentDate = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
         String currentDateTime = dateFormat.format(currentDate);
         if(!Objects.equals(roomLogger.roomOwner, "-")) {
-            String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner + " loaded at " + currentDateTime;
+            String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner.substring(4) + " loaded at " + currentDateTime;
             if (roomLogger.webhookEnabled) {
                 roomLogger.webhook.sendLog(logRoomReset, null, roomLogger.mentionWhispersWebhookCheckbox.isSelected(), roomLogger.mentionLocationsWebhookCheckbox.isSelected());
             }
@@ -280,13 +285,13 @@ public class OriginsInterceptor {
     void onItems(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         new Thread(() -> {
-            if (Objects.equals(roomLogger.roomOwner, "-")) {
+            if (Objects.equals(roomLogger.roomOwner.substring(4), "-")) {
                 Date currentDate = new Date();
                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                 String currentDateTime = dateFormat.format(currentDate);
                 OHItem[] items = OHItem.parse(hPacket);
                 roomLogger.roomOwner = items[0].getOwner();
-                String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner + " loaded at " + currentDateTime;
+                String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner.substring(4) + " loaded at " + currentDateTime;
                 if (roomLogger.webhookEnabled) {
                     roomLogger.webhook.sendLog(logRoomReset, null, roomLogger.mentionWhispersWebhookCheckbox.isSelected(), roomLogger.mentionLocationsWebhookCheckbox.isSelected());
                 }
