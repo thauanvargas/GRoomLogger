@@ -1,7 +1,6 @@
 import gearth.extensions.ExtensionForm;
 import gearth.extensions.ExtensionInfo;
 import gearth.extensions.extra.tools.GAsync;
-import gearth.extensions.parsers.*;
 import gearth.misc.Cacher;
 import gearth.protocol.HMessage;
 import gearth.protocol.HPacket;
@@ -24,7 +23,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import parsers.OHEntity;
 
 import java.awt.*;
 import java.io.File;
@@ -32,10 +30,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -44,7 +42,7 @@ import java.util.stream.IntStream;
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.3.3-beta",
+        Version = "1.3.4",
         Author = "Thauan"
 )
 
@@ -82,12 +80,15 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public Tab locationsTab;
     public Label clientVersionLabel;
     public Button focusButton;
+    public ListView<String> logOnlyRoomListView;
+    public CheckBox logOnlyRooms;
     private OriginsInterceptor originsInterceptor;
     private FlashInterceptor flashInterceptor;
     String roomOwner;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler());
         originsInterceptor = new OriginsInterceptor(this);
         flashInterceptor = new FlashInterceptor(this);
         setupCache();
@@ -212,7 +213,9 @@ public class RoomLogger extends ExtensionForm implements Initializable {
                 sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
             }).start();
             Platform.runLater(() -> {
-                clientVersionLabel.setText("FLASH");
+                logOnlyRooms.setVisible(false);
+                logOnlyRoomListView.setVisible(false);
+                clientVersionLabel.setText("Flash");
             });
         }else {
             new Thread(() -> {
@@ -471,6 +474,21 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         mentionLocationsWebhookCheckbox.setSelected(cache.optBoolean("mentionLocationsWebhook"));
         mentionWhispersWebhookCheckbox.setSelected(cache.optBoolean("mentionWhispersWebhook"));
 
+        JSONArray jsonArray = cache.optJSONArray("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"));
+        if (jsonArray != null) {
+            List<String> roomList = new ArrayList<>();
+            for (int i = 0; i < jsonArray.length(); i++) {
+                roomList.add(jsonArray.optString(i));
+            }
+
+            Platform.runLater(() -> {
+                logOnlyRoomListView.getItems().setAll(roomList);
+            });
+        } else {
+            Platform.runLater(() -> {
+                logOnlyRoomListView.getItems().clear();
+            });
+        }
 
         if (enableWebhookCheckbox.isSelected()) {
             webhookEnabled = true;
@@ -613,5 +631,35 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         });
 
         newStage.show();
+    }
+
+    public void clickLogOnlyRoom(ActionEvent event) {
+        if(logOnlyRooms.isSelected()) {
+            AtomicReference<JSONArray> jsonArray = new AtomicReference<>(new JSONArray());
+            if(roomId != -1) {
+                Platform.runLater(() -> {
+                    logOnlyRoomListView.getItems().add(String.valueOf(roomId));
+                    logOnlyRoomListView.getItems().forEach(item -> jsonArray.get().put(item));
+                    Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), jsonArray);
+                });
+            }
+            if(roomOwner != null) {
+                Platform.runLater(() -> {
+                    if(!logOnlyRoomListView.getItems().contains(roomOwner)) {
+                        logOnlyRoomListView.getItems().add(roomOwner);
+                        jsonArray.set(new JSONArray());
+                        logOnlyRoomListView.getItems().forEach(item -> jsonArray.get().put(item));
+                        Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), jsonArray);
+                    }
+                });
+            }
+        }
+    }
+
+    public void clearOnlyRoomLog(ActionEvent event) {
+        Platform.runLater(() -> {
+            logOnlyRoomListView.getItems().clear();
+            Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), null);
+        });
     }
 }

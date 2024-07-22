@@ -33,6 +33,9 @@
                         <CheckBox fx:id="logChatBotsCheckbox" layoutX="14.0" layoutY="79.0" mnemonicParsing="false" text="Log Chat Bots" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="79.0" />
                         <CheckBox fx:id="logUserActionsCheckbox" layoutX="14.0" layoutY="104.0" mnemonicParsing="false" text="Log User Actions" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="104.0" />
                         <Label layoutX="26.0" layoutY="6.0" text="Logging Options " AnchorPane.leftAnchor="26.0" AnchorPane.topAnchor="6.0" />
+                        <ListView fx:id="logOnlyRoomListView" layoutX="14.0" layoutY="153.0" prefHeight="63.0" prefWidth="120.0" />
+                        <CheckBox fx:id="logOnlyRooms" layoutX="15.0" layoutY="129.0" mnemonicParsing="false" onAction="#clickLogOnlyRoom" text="Log Rooms:" />
+                        <Button onAction="#clearOnlyRoomLog" layoutX="45.0" layoutY="219.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="54.0" text="Clear" />
                     </AnchorPane>
                     <Label fx:id="infoLabel" alignment="CENTER" layoutX="-1.0" layoutY="361.0" prefHeight="27.0" prefWidth="747.0" text="Please reload the Room to start the extension." textFill="#3100f5" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="50.0" AnchorPane.rightAnchor="50.0">
                         <font>

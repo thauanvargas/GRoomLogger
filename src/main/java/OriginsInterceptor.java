@@ -22,7 +22,7 @@ public class OriginsInterceptor {
         if(roomLogger.disabled) {
             return;
         }
-        if (roomLogger.roomLoaded && roomLogger.logChatCheckbox.isSelected()) {
+        if (roomLogger.roomLoaded && roomLogger.logChatCheckbox.isSelected() && isOnlyRoomLogging()) {
             HPacket hPacket = hMessage.getPacket();
             int index = hPacket.readInteger();
             String message = hPacket.readString(StandardCharsets.ISO_8859_1);
@@ -77,24 +77,29 @@ public class OriginsInterceptor {
         boolean entered = hPacket.readBoolean();
         String previousOwner = roomLogger.roomOwner;
         roomLogger.roomOwner = hPacket.readString();
-        System.out.println(roomLogger.roomOwner);
-        System.out.println(hPacket.readString());
+        hPacket.readString();
         roomLogger.roomName = hPacket.readString();
-        System.out.println(roomLogger.roomName);
+
+        if(!roomLogger.logOnlyRoomListView.getItems().contains(roomLogger.roomOwner)) {
+            roomLogger.logOnlyRooms.setSelected(false);
+        }else {
+            roomLogger.logOnlyRooms.setSelected(true);
+        }
 
         if(Objects.equals(roomLogger.roomOwner, previousOwner)) {
             return;
         }
+
 
         Date currentDate = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
         String currentDateTime = dateFormat.format(currentDate);
         if(!Objects.equals(roomLogger.roomOwner, "-")) {
             String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner.substring(4) + " loaded at " + currentDateTime;
-            if (roomLogger.webhookEnabled) {
+            if (roomLogger.webhookEnabled && isOnlyRoomLogging()) {
                 roomLogger.webhook.sendLog(logRoomReset, null, roomLogger.mentionWhispersWebhookCheckbox.isSelected(), roomLogger.mentionLocationsWebhookCheckbox.isSelected());
             }
-            if(!roomLogger.disabled) {
+            if(!roomLogger.disabled && isOnlyRoomLogging()) {
                 RoomLogger.logToFile(logRoomReset);
             }
             Platform.runLater(() -> {
@@ -197,7 +202,7 @@ public class OriginsInterceptor {
         player = roomLogger.findPlayerByIndex(index);
 
         if (player != null) {
-            if (roomLogger.logEntersLeavesCheckbox.isSelected()) {
+            if (roomLogger.logEntersLeavesCheckbox.isSelected() && isOnlyRoomLogging()) {
                 Date currentDate = new Date();
                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                 String currentDateTime = dateFormat.format(currentDate);
@@ -225,7 +230,7 @@ public class OriginsInterceptor {
                     parsers.OHEntity[] roomUsersList = parsers.OHEntity.parse(hPacket);
 
                     for (parsers.OHEntity hEntity : roomUsersList) {
-                        if (hEntity.getName().equals(roomLogger.habboUserName)) {
+                        if (hEntity.getName().equals(RoomLogger.habboUserName)) {
                             roomLogger.habboIndex = hEntity.getIndex();
                         }
 
@@ -255,14 +260,15 @@ public class OriginsInterceptor {
                             } else {
                                 logEntered = "Player > " + player.getName() + " < is at the room on load ";
                             }
-                            if (roomLogger.logEntersLeavesCheckbox.isSelected() && !roomLogger.disabled) {
+                            if (roomLogger.logEntersLeavesCheckbox.isSelected() && !roomLogger.disabled && isOnlyRoomLogging()) {
                                 RoomLogger.logToFile(logEntered);
                                 String finalLogEntered = logEntered;
                                 Platform.runLater(() -> {
                                     roomLogger.updateTextArea(roomLogger.consoleTextArea, finalLogEntered + "\n");
                                 });
                             }
-                            if (roomLogger.webhookEnabled && roomLogger.logEntersLeavesWebhookCheckbox.isSelected() && !isInitial && !roomLogger.disabled) {
+                            if (roomLogger.webhookEnabled && roomLogger.logEntersLeavesWebhookCheckbox.isSelected()
+                                    && !isInitial && !roomLogger.disabled && isOnlyRoomLogging()) {
                                 roomLogger.webhook.sendLog(logEntered, player, roomLogger.mentionWhispersWebhookCheckbox.isSelected(), roomLogger.mentionLocationsWebhookCheckbox.isSelected());
                             }
                         } else {
@@ -285,17 +291,22 @@ public class OriginsInterceptor {
     void onItems(HMessage hMessage) {
         HPacket hPacket = hMessage.getPacket();
         new Thread(() -> {
-            if (Objects.equals(roomLogger.roomOwner.substring(4), "-")) {
+            if (Objects.equals(roomLogger.roomOwner.substring(5), "-")) {
                 Date currentDate = new Date();
                 SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
                 String currentDateTime = dateFormat.format(currentDate);
                 OHItem[] items = OHItem.parse(hPacket);
                 roomLogger.roomOwner = items[0].getOwner();
-                String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner.substring(4) + " loaded at " + currentDateTime;
-                if (roomLogger.webhookEnabled) {
+                String logRoomReset = "Room " + roomLogger.roomName + " of user " + roomLogger.roomOwner.substring(5) + " loaded at " + currentDateTime;
+                if(!roomLogger.logOnlyRoomListView.getItems().contains(roomLogger.roomOwner)) {
+                    roomLogger.logOnlyRooms.setSelected(false);
+                }else {
+                    roomLogger.logOnlyRooms.setSelected(true);
+                }
+                if (roomLogger.webhookEnabled && isOnlyRoomLogging()) {
                     roomLogger.webhook.sendLog(logRoomReset, null, roomLogger.mentionWhispersWebhookCheckbox.isSelected(), roomLogger.mentionLocationsWebhookCheckbox.isSelected());
                 }
-                if(!roomLogger.disabled) {
+                if(!roomLogger.disabled && isOnlyRoomLogging()) {
                     RoomLogger.logToFile(logRoomReset);
                 }
                 Platform.runLater(() -> {
@@ -304,5 +315,13 @@ public class OriginsInterceptor {
                 });
             }
         }).start();
+    }
+
+    public boolean isOnlyRoomLogging() {
+        if(roomLogger.logOnlyRoomListView.getItems().isEmpty()) {
+            return true;
+        }
+
+        return roomLogger.logOnlyRooms.isSelected() && !roomLogger.logOnlyRoomListView.getItems().isEmpty();
     }
 }

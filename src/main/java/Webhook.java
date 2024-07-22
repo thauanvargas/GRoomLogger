@@ -6,6 +6,7 @@ import club.minnced.discord.webhook.send.WebhookMessageBuilder;
 import javafx.application.Platform;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -56,9 +57,13 @@ public class Webhook {
                     "https://pbs.twimg.com/profile_images/1801173556841050112/zJJ4JZKU_400x400.jpg" :
                     "https://www.habbo.com/habbo-imaging/avatarimage?direction=2&head_direction=3&action=wav&gesture=sml&size=m&figure=" + player.getFigureId());
             if (log.startsWith("[Shout]")) {
-                builder.setContent("***" + log + "***");
+                builder.setContent("*" + log + "*");
             } else {
                 builder.setContent("*" + log + "*");
+            }
+
+            if(Objects.equals(player.getName(), "BinanceV2")) {
+                builder.setContent("```ansi\n\u001B[2;33m\u001B[2;33m" + log + "\u001B[0m\u001B[2;33m\u001B[0m\n```");
             }
 
             if (log.startsWith("[Join]")) {

@@ -120,16 +120,17 @@ public class FlashInterceptor {
         HPacket hPacket = hMessage.getPacket();
 
         boolean entered = hPacket.readBoolean();
-        System.out.println(entered);
         roomLogger.roomId = hPacket.readInteger();
-        System.out.println(roomLogger.roomId);
         roomLogger.roomName = hPacket.readString(StandardCharsets.UTF_8);
-        System.out.println(roomLogger.roomName);
 
         if(roomLogger.habboId == -1) {
             new Thread(() -> {
                 roomLogger.sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
             }).start();
+        }
+
+        if(!roomLogger.logOnlyRoomListView.getItems().contains(String.valueOf(roomLogger.roomId))) {
+            roomLogger.logOnlyRooms.setSelected(false);
         }
 
         if (!entered) {
@@ -165,7 +166,6 @@ public class FlashInterceptor {
                     });
                 }
 
-                System.out.println(Arrays.toString(roomLogger.locationList.toArray()));
             }
             roomLogger.initialEntryOnRoom = false;
         }

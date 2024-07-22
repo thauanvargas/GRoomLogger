@@ -26,8 +26,6 @@ public class OHItem {
         int i;
         OHItem[] entities = new OHItem[(packets.length)];
 
-        System.out.println(packets.length);
-
         for(i = 0; i < packets.length; i++) {
             String[] packetString = packets[i].split("\t");
             entities[i] = new OHItem(packetString);
