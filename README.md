@@ -11,3 +11,7 @@ Let's you log certain things inside a room.
 
 
 All the logs are saved in G-Earth Folder
+
+This branch is being used for beta updates adding support to Habbo Hotel: Origins 
+Use Mikee's G-Earth so you can use this version
+https://github.com/UnfamiliarLegacy/G-Earth/releases/
