@@ -1,19 +1,25 @@
 import gearth.extensions.ExtensionForm;
 import gearth.extensions.ExtensionInfo;
-import gearth.extensions.extra.tools.AwaitingPacket;
 import gearth.extensions.extra.tools.GAsync;
-import gearth.extensions.parsers.*;
 import gearth.misc.Cacher;
 import gearth.protocol.HMessage;
 import gearth.protocol.HPacket;
+import gearth.protocol.packethandler.shockwave.packets.ShockPacketOutgoing;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -24,10 +30,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -36,7 +42,7 @@ import java.util.stream.IntStream;
 @ExtensionInfo(
         Title = "Room Logger",
         Description = "The Best Habbo Chat Logger",
-        Version = "1.2",
+        Version = "1.3.5",
         Author = "Thauan"
 )
 
@@ -64,15 +70,27 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public CheckBox mentionLocationsWebhookCheckbox;
     public CheckBox hideWhispersWebhookCheckbox;
     public CheckBox disableLogWithHabboCheckbox;
-    private final Webhook webhook = new Webhook();
+    final Webhook webhook = new Webhook();
     public Label usernameLabel;
     public ListView<String> locationListView;
     public TextArea consoleLogLocations;
     public Button clearAllLogLocations;
     public Button removeLogLocation;
+    public Label yourUserNameLabel;
+    public Tab locationsTab;
+    public Label clientVersionLabel;
+    public Button focusButton;
+    public ListView<String> logOnlyRoomListView;
+    public CheckBox logOnlyRooms;
+    private OriginsInterceptor originsInterceptor;
+    private FlashInterceptor flashInterceptor;
+    String roomOwner;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler());
+        originsInterceptor = new OriginsInterceptor(this);
+        flashInterceptor = new FlashInterceptor(this);
         setupCache();
 
         if (!webhookUrlTextField.getText().isEmpty()) {
@@ -173,6 +191,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
     public boolean webhookEnabled = false;
     public boolean loggerSetuped = false;
     public boolean disabled = false;
+    public static boolean isOrigins = false;
 
 
     @Override
@@ -185,15 +204,32 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         logEntersLeavesCheckbox.setSelected(true);
 
         gAsync = new GAsync(this);
-
     }
 
     @Override
     protected void onShow() {
-        new Thread(() -> {
-            sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
-        }).start();
-
+        if(!isOrigins) {
+            new Thread(() -> {
+                sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
+            }).start();
+            Platform.runLater(() -> {
+                logOnlyRooms.setVisible(false);
+                logOnlyRoomListView.setVisible(false);
+                clientVersionLabel.setText("Flash");
+            });
+        }else {
+            new Thread(() -> {
+                sendToServer(new ShockPacketOutgoing("{out:INFORETRIEVE}"));
+            }).start();
+            Platform.runLater(() -> {
+                clientVersionLabel.setText("Origins");
+                logChatBotsCheckbox.setVisible(false);
+                locationsTab.setDisable(true);
+                logUserActionsCheckbox.setVisible(false);
+                mentionLocationsWebhookCheckbox.setDisable(true);
+                logLocationWebhookCheckbox.setDisable(true);
+            });
+        }
         System.out.println("> https://www.youtube.com/watch?v=dQw4w9WgXcQ <");
     }
 
@@ -202,6 +238,10 @@ public class RoomLogger extends ExtensionForm implements Initializable {
 
         onConnect((host, port, APIVersion, versionClient, client) -> {
             this.host = host.substring(5, 7);
+
+            if (Objects.equals(versionClient, "SHOCKWAVE")) {
+                isOrigins = true;
+            }
         });
 
         intercept(HMessage.Direction.TOCLIENT, "UserObject", hMessage -> {
@@ -228,377 +268,50 @@ public class RoomLogger extends ExtensionForm implements Initializable {
             }
         });
 
-        intercept(HMessage.Direction.TOCLIENT, "GetGuestRoomResult", this::onGetGuestRoomResult);
+        intercept(HMessage.Direction.TOCLIENT, "GetGuestRoomResult", flashInterceptor::onGetGuestRoomResult);
 
-        intercept(HMessage.Direction.TOCLIENT, "Users", this::onUsers);
+        intercept(HMessage.Direction.TOCLIENT, "Users", flashInterceptor::onUsers);
 
-        intercept(HMessage.Direction.TOCLIENT, "UserUpdate", this::onUserUpdate);
+        intercept(HMessage.Direction.TOCLIENT, "UserUpdate", flashInterceptor::onUserUpdate);
 
-        intercept(HMessage.Direction.TOSERVER, "MoveAvatar", this::onSetupLocation);
+        intercept(HMessage.Direction.TOSERVER, "MoveAvatar", flashInterceptor::onSetupLocation);
 
-        intercept(HMessage.Direction.TOCLIENT, "UserRemove", this::onUserRemove);
+        intercept(HMessage.Direction.TOCLIENT, "UserRemove", flashInterceptor::onUserRemove);
 
-        intercept(HMessage.Direction.TOCLIENT, "Chat", this::onChat);
+        intercept(HMessage.Direction.TOCLIENT, "Chat", flashInterceptor::onChat);
 
-        intercept(HMessage.Direction.TOCLIENT, "Shout", this::onChat);
+        intercept(HMessage.Direction.TOCLIENT, "Shout", flashInterceptor::onChat);
 
-        intercept(HMessage.Direction.TOCLIENT, "Whisper", this::onChat);
+        intercept(HMessage.Direction.TOCLIENT, "Whisper", flashInterceptor::onChat);
 
-        intercept(HMessage.Direction.TOCLIENT, "Dance", this::onDance);
+        intercept(HMessage.Direction.TOCLIENT, "Dance", flashInterceptor::onDance);
 
-        intercept(HMessage.Direction.TOCLIENT, "Expression", this::onExpression);
+        intercept(HMessage.Direction.TOCLIENT, "Expression", flashInterceptor::onExpression);
+
+        intercept(HMessage.Direction.TOCLIENT, "CHAT", originsInterceptor::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "CHAT_2", originsInterceptor::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "CHAT_3", originsInterceptor::onChat);
+
+        intercept(HMessage.Direction.TOCLIENT, "USERS", originsInterceptor::onUsersOrigin);
+
+        intercept(HMessage.Direction.TOCLIENT, "FLATINFO", originsInterceptor::onFlatInfo);
+
+        intercept(HMessage.Direction.TOCLIENT, "ROOM_READY", originsInterceptor::onRoomReady);
+
+        intercept(HMessage.Direction.TOCLIENT, "LOGOUT", originsInterceptor::onUserRemove);
+
+        intercept(HMessage.Direction.TOCLIENT, "STATUS", originsInterceptor::onStatus);
+
+        intercept(HMessage.Direction.TOCLIENT, "USER_OBJ", originsInterceptor::onUserObject);
+
+        intercept(HMessage.Direction.TOCLIENT, "ITEMS", originsInterceptor::onItems);
+
 
     }
 
-    private void onGetGuestRoomResult(HMessage hMessage) {
-        HPacket hPacket = hMessage.getPacket();
-        boolean entered = hPacket.readBoolean();
-        roomId = hPacket.readInteger();
-        roomName = hPacket.readString(StandardCharsets.UTF_8);
-
-        if(habboId == -1) {
-            new Thread(() -> {
-                sendToServer(new HPacket("InfoRetrieve", HMessage.Direction.TOSERVER));
-            }).start();
-        }
-
-
-        if (!entered) {
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            String currentDateTime = dateFormat.format(currentDate);
-            String logRoomReset = "Room " + roomName + " loaded at " + currentDateTime;
-            if (webhookEnabled) {
-                webhook.sendLog(logRoomReset, null, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-            }
-            if(!disabled) {
-                logToFile(logRoomReset);
-            }
-            Platform.runLater(() -> {
-                infoLabel.setText("Locations was resetted because room was reloaded.");
-                consoleTextArea.appendText(logRoomReset + "\n");
-            });
-            roomLoaded = false;
-            playerList.clear();
-            locationList.clear();
-            Platform.runLater(() -> {
-                locationListView.getItems().clear();
-            });
-
-        } else {
-            if(Cacher.get("logLocation" + roomId) != null) {
-                JSONArray jsonArray = (JSONArray) Cacher.get("logLocation" + roomId);
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject jsonLoc = jsonArray.getJSONObject(i);
-                    locationList.add(new Location(jsonLoc.getInt("x"), jsonLoc.getInt("y"), jsonLoc.getString("name")));
-                    Platform.runLater(() -> {
-                        locationListView.getItems().add("(" + jsonLoc.getInt("x") + ", " + jsonLoc.getInt("y") + ") " + jsonLoc.getString("name"));
-                    });
-                }
-
-                System.out.println(Arrays.toString(locationList.toArray()));
-            }
-            initialEntryOnRoom = false;
-        }
-
-        if (!roomLoaded && !entered) {
-            Platform.runLater(() -> {
-                logLocationCheckbox.setDisable(false);
-                customLocationNameTextField.setDisable(false);
-                customNameLabel.setDisable(false);
-                infoLabel.setText("Room was loaded, extension ready, any question ask in discord > thauanvargas <");
-            });
-            roomLoaded = true;
-            initialEntryOnRoom = true;
-        }
-
-    }
-
-
-    private void onChat(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        if (roomLoaded && logChatCheckbox.isSelected()) {
-            HPacket hPacket = hMessage.getPacket();
-            int index = hPacket.readInteger();
-            String message = hPacket.readString(StandardCharsets.UTF_8);
-            hPacket.readInteger();
-            int bubble = hPacket.readInteger();
-            Player player = findPlayerByIndex(index);
-
-            if (player != null) {
-                boolean isBot = player.isBot();
-                if (player.isBot() && !logChatBotsCheckbox.isSelected()) {
-                    return;
-                }
-                Date currentDate = new Date();
-                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-                String currentDateTime = dateFormat.format(currentDate);
-                String hash = this.getPacketInfoManager().getPacketInfoFromHeaderId(HMessage.Direction.TOCLIENT, hPacket.headerId()).getName();
-
-                if (Objects.equals(hash, "Whisper")) {
-                    if (bubble == 34) {
-                        hash = "Wired";
-                    }
-                }
-
-                String logChat = "[" + (isBot ? "BOT" : hash) + "] [" + currentDateTime + "] " + player.getName() + " : " + message;
-                logToFile(logChat);
-                Platform.runLater(() -> {
-                    consoleTextArea.appendText(logChat + "\n");
-                });
-                if (webhookEnabled && logChatWebhookCheckbox.isSelected() && !isBot &&
-                        !Objects.equals(hash, "Wired") && !disabled) {
-
-                    boolean isWhisper = Objects.equals(hash, "Whisper");
-
-                    if (isWhisper && hideWhispersWebhookCheckbox.isSelected()) {
-                        return;
-                    }
-
-                    webhook.sendLog(logChat, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-
-                }
-            }
-        }
-    }
-
-    private void onExpression(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        HPacket hPacket = hMessage.getPacket();
-        int index = hPacket.readInteger();
-        int expression = hPacket.readInteger();
-        Player player = findPlayerByIndex(index);
-
-        if (player != null && logUserActionsCheckbox.isSelected()) {
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            String currentDateTime = dateFormat.format(currentDate);
-            String expressionName = "";
-            if (expression == 1) {
-                expressionName = "Waved";
-            } else if (expression == 2) {
-                expressionName = "Sent a kiss";
-            } else if (expression == 3) {
-                expressionName = "Laugh";
-            } else if (expression == 5) {
-                expressionName = "Idled";
-            } else if (expression == 7) {
-                expressionName = "Did a Like";
-            }
-
-            if (expression != 4 && expression != 0) {
-                String logChat = "[Action] " + player.getName() + " " + expressionName + " at " + currentDateTime;
-                logToFile(logChat);
-                Platform.runLater(() -> {
-                    consoleTextArea.appendText(logChat + "\n");
-                });
-            }
-        }
-    }
-
-    private void onDance(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        HPacket hPacket = hMessage.getPacket();
-        int index = hPacket.readInteger();
-        int dance = hPacket.readInteger();
-        Player player = findPlayerByIndex(index);
-
-        if (player != null && logUserActionsCheckbox.isSelected()) {
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-            String currentDateTime = dateFormat.format(currentDate);
-            String danceName = "";
-            if (dance == 1) {
-                danceName = "Hap-hop";
-            } else if (dance == 2) {
-                danceName = "Pogo-Mogo";
-            } else if (dance == 3) {
-                danceName = "Duck Funk";
-            } else if (dance == 4) {
-                danceName = "Rollie";
-            }
-
-            String logChat = "[Action] " + player.getName() + (!danceName.isEmpty() ? " started dancing " + danceName : " stopped dancing") + " at " + currentDateTime;
-            logToFile(logChat);
-            Platform.runLater(() -> {
-                consoleTextArea.appendText(logChat + "\n");
-            });
-        }
-    }
-
-    private void onUsers(HMessage hMessage) {
-        new Thread(() -> {
-            boolean isInitial = initialEntryOnRoom;
-            if (roomLoaded) {
-                try {
-                    HPacket hPacket = hMessage.getPacket();
-                    HEntity[] roomUsersList = HEntity.parse(hPacket);
-                    for (HEntity hEntity : roomUsersList) {
-                        if (hEntity.getName().equals(habboUserName)) {
-                            habboIndex = hEntity.getIndex();
-                        }
-
-                        if (hEntity.getEntityType() == HEntityType.PET) {
-                            continue;
-                        }
-
-                        Player player = findPlayerById(hEntity.getId());
-
-                        if (player == null) {
-                            player = new Player(hEntity.getId(), hEntity.getIndex(), hEntity.getName());
-                            if (hEntity.getEntityType() == HEntityType.BOT || hEntity.getEntityType() == HEntityType.OLD_BOT) {
-                                player.setBot(true);
-                            } else {
-                                player.setFigureId(hEntity.getFigureId());
-                            }
-                            player.setCoordX(-1);
-                            player.setCoordY(-1);
-                            playerList.add(player);
-                            Date currentDate = new Date();
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                            String currentDateTime = dateFormat.format(currentDate);
-                            String logEntered = "";
-                            if (!isInitial) {
-                                logEntered = "[Join] Player > " + player.getName() + " < entered the room at " + currentDateTime;
-                            } else {
-                                logEntered = "Player > " + player.getName() + " < is at the room on load ";
-                            }
-                            if (logEntersLeavesCheckbox.isSelected() && !disabled) {
-                                logToFile(logEntered);
-                                String finalLogEntered = logEntered;
-                                Platform.runLater(() -> {
-                                    consoleTextArea.appendText(finalLogEntered + "\n");
-                                });
-                            }
-                            if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !isInitial && !disabled) {
-                                webhook.sendLog(logEntered, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                            }
-                        } else {
-                            player.setFigureId(hEntity.getFigureId());
-                            player.setIndex(hEntity.getIndex());
-                            player.setCoordX(-1);
-                            player.setCoordY(-1);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-    }
-
-    private void onUserUpdate(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        if (roomLoaded) {
-            try {
-                for (HEntityUpdate hEntityUpdate : HEntityUpdate.parse(hMessage.getPacket())) {
-                    HStance hStance = hEntityUpdate.getStance();
-                    int currentIndex = hEntityUpdate.getIndex();
-                    int currentX = hEntityUpdate.getTile().getX();
-                    int currentY = hEntityUpdate.getTile().getY();
-                    Player player = findPlayerByIndex(currentIndex);
-                    Location location = getLocation(currentX, currentY);
-                    Date currentDate = new Date();
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                    String currentDateTime = dateFormat.format(currentDate);
-
-                    if (player == null) {
-                        continue;
-                    }
-
-                    if (logUserActionsCheckbox.isSelected()) {
-                        if (hEntityUpdate.getSign() != null) {
-                            String log = "[Action] " + player.getName() + " showed sign " + hEntityUpdate.getSign() + "  at " + currentDateTime;
-                            logToFile(log);
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                            });
-                        }
-                    }
-
-                    if (location == null) {
-                        continue;
-                    }else {
-                        if(hEntityUpdate.getAction() == HAction.None || hEntityUpdate.getAction() == HAction.Sit) {
-                            player.setCoordX(currentX);
-                            player.setCoordY(currentY);
-
-                            String log = getLocationLog(player, location, currentDateTime, false, hEntityUpdate.getAction() == HAction.Sit);
-                            logToFile(log);
-                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
-                                webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                            }
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                                consoleLogLocations.appendText(log + "\n");
-                            });
-                        }
-                    }
-
-                    if (hEntityUpdate.getAction() == HAction.Move) {
-                        if (player.getLocation() != null) {
-                            String log = getLocationLog(player, player.getLocation(), currentDateTime, true, hEntityUpdate.getAction() == HAction.Sit);
-                            logToFile(log);
-                            if (webhookEnabled && logLocationWebhookCheckbox.isSelected() && !disabled) {
-                                webhook.sendLog(log, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                            }
-                            Platform.runLater(() -> {
-                                consoleTextArea.appendText(log + "\n");
-                                consoleLogLocations.appendText(log + "\n");
-                            });
-                            player.setLocation(null);
-                            continue;
-                        }
-
-                    }
-
-
-                    player.setLocation(location);
-
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void onUserRemove(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        HPacket hPacket = hMessage.getPacket();
-
-        String index = hPacket.readString();
-        Player player = findPlayerByIndex(Integer.parseInt(index));
-
-        if (player != null) {
-            if (logEntersLeavesCheckbox.isSelected()) {
-                Date currentDate = new Date();
-                SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-                String currentDateTime = dateFormat.format(currentDate);
-                String logLeave = "[Leave] Player > " + player.getName() + " < left the room at " + currentDateTime;
-                logToFile(logLeave);
-                if (webhookEnabled && logEntersLeavesWebhookCheckbox.isSelected() && !disabled) {
-                    webhook.sendLog(logLeave, player, mentionWhispersWebhookCheckbox.isSelected(), mentionLocationsWebhookCheckbox.isSelected());
-                }
-                Platform.runLater(() -> {
-                    consoleTextArea.appendText(logLeave + "\n");
-                });
-            }
-            playerList.remove(player);
-        }
-
-    }
-
-    private static String getLocationLog(Player player, Location location, String currentDateTime, boolean left, boolean sitted) {
+    static String getLocationLog(Player player, Location location, String currentDateTime, boolean left, boolean sitted) {
         String log = "[Location] Player > " + player.getName() + " < ";
 
         if (left) {
@@ -625,48 +338,19 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         return playerList.stream().filter(player -> player.getId() == id).findFirst().orElse(null);
     }
 
-    protected Player findPlayerByIndex(int index) {
-        return playerList.stream().filter(player -> player.getIndex() == index).findFirst().orElse(null);
+    protected Player findPlayerByUserName(String userName) {
+        return playerList.stream().filter(player -> Objects.equals(player.getName(), userName)).findFirst().orElse(null);
     }
 
-    protected void onSetupLocation(HMessage hMessage) {
-        if(disabled) {
-            return;
-        }
-        HPacket hPacket = hMessage.getPacket();
-        HPoint point = new HPoint(hPacket.readInteger(), hPacket.readInteger());
-
-        if (logLocationCheckbox.isSelected()) {
-            new Thread(() -> {
-                Location location = getLocation(point.getX(), point.getY());
-                if (location == null) {
-                    Location newLocation = new Location(point.getX(), point.getY(), customLocationNameTextField.getText());
-                    locationList.add(newLocation);
-                    Platform.runLater(() -> {
-                        logLocationCheckbox.setSelected(false);
-                        if(customLocationNameTextField.getText().isEmpty()) {
-                            infoLabel.setText("Added Location at (" + point.getX() + ", " + point.getY() + ")");
-                        } else {
-                            infoLabel.setText("Added Location at (" + point.getX() + ", " + point.getY() + ") with name " + customLocationNameTextField.getText());
-                        }
-                        locationListView.getItems().add("(" + point.getX() + ", " + point.getY() + ")" + " " + customLocationNameTextField.getText());
-                        customLocationNameTextField.setText("");
-
-                        saveLocationsToCache();
-                    });
-
-                } else {
-                    location.setCustomName(customLocationNameTextField.getText());
-                }
-            }).start();
-        }
+    protected Player findPlayerByIndex(int index) {
+        return playerList.stream().filter(player -> player.getIndex() == index).findFirst().orElse(null);
     }
 
     public static void logToFile(String message) {
         logger.info(message);
     }
 
-    private static void setupFileLogger() {
+    static void setupFileLogger() {
         Date currentDate = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         String currentDateTime = dateFormat.format(currentDate);
@@ -684,7 +368,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
 
         try {
-            FileHandler fileHandler = new FileHandler( logFolderPath + habboUserName + "-" + currentDateTime + "-log.txt", 0, 1, true);
+            FileHandler fileHandler = new FileHandler( logFolderPath + (isOrigins ? "origins-" : "") + habboUserName + "-" + currentDateTime + "-log.txt", 0, 1, true);
             SimpleFormatter simpleFormatter = new SimpleFormatter();
             fileHandler.setFormatter(simpleFormatter);
 
@@ -790,6 +474,22 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         mentionLocationsWebhookCheckbox.setSelected(cache.optBoolean("mentionLocationsWebhook"));
         mentionWhispersWebhookCheckbox.setSelected(cache.optBoolean("mentionWhispersWebhook"));
 
+        JSONArray jsonArray = cache.optJSONArray("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"));
+        if (jsonArray != null) {
+            List<String> roomList = new ArrayList<>();
+            for (int i = 0; i < jsonArray.length(); i++) {
+                roomList.add(jsonArray.optString(i));
+            }
+
+            Platform.runLater(() -> {
+                logOnlyRoomListView.getItems().setAll(roomList);
+            });
+        } else {
+            Platform.runLater(() -> {
+                logOnlyRoomListView.getItems().clear();
+            });
+        }
+
         if (enableWebhookCheckbox.isSelected()) {
             webhookEnabled = true;
         }
@@ -858,7 +558,7 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         saveLocationsToCache();
     }
 
-    private void saveLocationsToCache() {
+    void saveLocationsToCache() {
         JSONArray jsonLocs = new JSONArray();
         for (Location loc : locationList) {
             JSONObject jsonLoc = new JSONObject();
@@ -869,5 +569,97 @@ public class RoomLogger extends ExtensionForm implements Initializable {
         }
 
         Cacher.put("logLocation" + roomId, jsonLocs);
+    }
+
+    public void updateTextArea(TextArea textArea, String newText) {
+        ScrollPane scrollPane = (ScrollPane) textArea.lookup(".scroll-pane");
+        double scrollVvalue = 0;
+        double scrollVmax = 0;
+        boolean atBottom = false;
+
+        if (scrollPane != null) {
+            scrollVvalue = scrollPane.getVvalue();
+            scrollVmax = scrollPane.getVmax();
+            atBottom = Double.compare(scrollVvalue, scrollVmax) == 0;
+        }
+
+        if (atBottom) {
+            textArea.appendText(newText);
+        } else {
+            String currentText = textArea.getText();
+            textArea.setText(currentText + newText);
+
+            final double finalScrollVvalue = scrollVvalue;
+            Platform.runLater(() -> {
+                if (scrollPane != null) {
+                    scrollPane.setVvalue(finalScrollVvalue);
+                }
+            });
+        }
+    }
+
+
+    public void focusMode() {
+        Pane originalParent = (Pane) consoleTextArea.getParent();
+
+        int originalIndex = originalParent.getChildren().indexOf(consoleTextArea);
+
+
+        if (originalParent != null) {
+            originalParent.getChildren().remove(consoleTextArea);
+        }
+
+        VBox root = new VBox(consoleTextArea);
+        VBox.setVgrow(consoleTextArea, Priority.ALWAYS);
+        Scene scene = new Scene(root, 800, 600);
+        Stage newStage = new Stage();
+        newStage.setScene(scene);
+        newStage.setAlwaysOnTop(true);
+        newStage.initModality(Modality.WINDOW_MODAL);
+        newStage.initOwner(primaryStage);
+        focusButton.setDisable(true);
+
+        javafx.scene.image.Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
+        newStage.getIcons().add(icon);
+        newStage.setTitle("FOCUS MODE - Room Logger by Thauan");
+
+        newStage.setOnCloseRequest(e -> {
+            if (originalParent != null) {
+                originalParent.getChildren().add(originalIndex, consoleTextArea);
+                focusButton.setDisable(false);
+            }
+        });
+
+        newStage.show();
+    }
+
+    public void clickLogOnlyRoom(ActionEvent event) {
+        if(logOnlyRooms.isSelected()) {
+            AtomicReference<JSONArray> jsonArray = new AtomicReference<>(new JSONArray());
+            if(roomId != -1) {
+                Platform.runLater(() -> {
+                    logOnlyRoomListView.getItems().add(String.valueOf(roomId));
+                    logOnlyRoomListView.getItems().forEach(item -> jsonArray.get().put(item));
+                    Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), jsonArray);
+                });
+            }
+            if(roomOwner != null) {
+                Platform.runLater(() -> {
+                    if(!logOnlyRoomListView.getItems().contains(roomOwner)) {
+                        logOnlyRoomListView.getItems().add(roomOwner);
+                        jsonArray.set(new JSONArray());
+                        logOnlyRoomListView.getItems().forEach(item -> jsonArray.get().put(item));
+                        Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), jsonArray);
+                    }
+                });
+            }
+        }
+    }
+
+    public void clearOnlyRoomLog(ActionEvent event) {
+        Platform.runLater(() -> {
+            logOnlyRoomListView.getItems().clear();
+            Cacher.put("logOnlyRooms" + (isOrigins ? "Origins" : "Flash"), null);
+        });
     }
 }
