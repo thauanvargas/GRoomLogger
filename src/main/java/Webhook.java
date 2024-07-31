@@ -44,6 +44,8 @@ public class Webhook {
     }
 
     public void sendLog(String log, Player player, boolean isMentionWhisper, boolean isMentionLocation) {
+        try {
+
         WebhookMessageBuilder builder = new WebhookMessageBuilder();
         if(player == null) {
             builder.setUsername("Room Logger by Thauan");
@@ -62,9 +64,6 @@ public class Webhook {
                 builder.setContent("*" + log + "*");
             }
 
-            if(Objects.equals(player.getName(), "BinanceV2")) {
-                builder.setContent("```ansi\n\u001B[2;33m\u001B[2;33m" + log + "\u001B[0m\u001B[2;33m\u001B[0m\n```");
-            }
 
             if (log.startsWith("[Join]")) {
                 builder.setUsername("Room Logger by Thauan (#" + player.getIndex() + ")");
@@ -107,6 +106,11 @@ public class Webhook {
 
 
         client.send(builder.build());
+
+        } catch (Exception e) {
+            RoomLogger.logToFile("Webhook Crashed, we will attempt to restart it.");
+            setupWebhook();
+        }
 
     }
 
